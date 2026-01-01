@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import socket from "../../lib/socket"; // ✅ adjust path if needed
+import socket from "@/lib/socket";
 
 export default function DetailPage() {
   const params = useParams();
