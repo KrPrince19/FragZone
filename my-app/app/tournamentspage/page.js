@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Trophy, CalendarDays, Users } from "lucide-react";
+import socket from "../../lib/socket"; // ✅ adjust path if needed
 
 /* =====================================================
    TOURNAMENT STATUS (TODAY = LIVE | DATE ONLY)
@@ -58,22 +59,36 @@ const Page = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchTournaments = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/tournament");
-        if (!res.ok) throw new Error(`Server error ${res.status}`);
-        const data = await res.json();
-        setTournaments(data);
-      } catch (err) {
-        console.error(err);
-        setError("❌ Failed to fetch tournaments");
-      } finally {
-        setLoading(false);
-      }
-    };
+  /* ================= FETCH TOURNAMENTS ================= */
+  const fetchTournaments = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/tournament");
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const data = await res.json();
+      setTournaments(data);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError("❌ Failed to fetch tournaments");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  /* ================= INITIAL LOAD ================= */
+  useEffect(() => {
     fetchTournaments();
+  }, []);
+
+  /* ================= SOCKET LISTENER ================= */
+  useEffect(() => {
+    socket.on("db-update", (data) => {
+      if (data.event === "TOURNAMENT_ADDED") {
+        fetchTournaments(); // 🔥 refetch ONCE
+      }
+    });
+
+    return () => socket.off("db-update");
   }, []);
 
   return (

@@ -2,6 +2,7 @@
 
 import { UserButton } from "@clerk/nextjs";
 import React, { useEffect, useState } from "react";
+import socket from "../../lib/socket"; // ✅ adjust path if needed
 
 export default function UserDashboard({ userEmail, name }) {
   const [Joindata, setJoindata] = useState([]);
@@ -10,22 +11,35 @@ export default function UserDashboard({ userEmail, name }) {
   const [loading, setLoading] = useState(true);
 
   /* ================= FETCH JOINED MATCHES ================= */
-  useEffect(() => {
-    const fetchTournamentDetails = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/joinmatches");
-        if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-        const data = await res.json();
-        setJoindata(data);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to fetch tournament data.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchTournamentDetails = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/joinmatches");
+      if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+      const data = await res.json();
+      setJoindata(data);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch tournament data.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  /* ================= INITIAL LOAD ================= */
+  useEffect(() => {
     fetchTournamentDetails();
+  }, []);
+
+  /* ================= SOCKET LISTENER ================= */
+  useEffect(() => {
+    socket.on("db-update", (data) => {
+      if (data.event === "JOIN_MATCH") {
+        fetchTournamentDetails(); // 🔥 refetch ONCE
+      }
+    });
+
+    return () => socket.off("db-update");
   }, []);
 
   /* ================= FIND USER MATCH ================= */

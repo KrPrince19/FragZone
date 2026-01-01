@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import socket from "../../lib/socket"; // adjust path if needed
 
 const Page = () => {
   const [rankData, setRankData] = useState([]);
@@ -9,35 +10,51 @@ const Page = () => {
   const [error, setError] = useState(null);
 
   /* ================= FETCH LEADERBOARD ================= */
-  useEffect(() => {
-    const fetchRanks = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/leaderboard");
-        if (!res.ok) throw new Error("Failed to fetch leaderboard");
-        const data = await res.json();
-        setRankData(data);
-      } catch (err) {
-        setError("❌ Failed to load leaderboard");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRanks();
-  }, []);
+  const fetchRanks = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/leaderboard");
+      if (!res.ok) throw new Error("Failed to fetch leaderboard");
+      const data = await res.json();
+      setRankData(data);
+      setError(null);
+    } catch (err) {
+      setError("❌ Failed to load leaderboard");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   /* ================= FETCH TOP PLAYERS ================= */
+  const fetchTopPlayers = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/winner");
+      if (!res.ok) throw new Error("Failed to fetch top players");
+      const data = await res.json();
+      setTopPlayers(data.slice(0, 3));
+    } catch (err) {
+      setError("❌ Failed to load top players");
+    }
+  };
+
+  /* ================= INITIAL LOAD ================= */
   useEffect(() => {
-    const fetchTopPlayers = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/winner");
-        if (!res.ok) throw new Error("Failed to fetch top players");
-        const data = await res.json();
-        setTopPlayers(data.slice(0, 3));
-      } catch (err) {
-        setError("❌ Failed to load top players");
-      }
-    };
+    fetchRanks();
     fetchTopPlayers();
+  }, []);
+
+  /* ================= SOCKET LISTENER ================= */
+  useEffect(() => {
+    socket.on("db-update", (data) => {
+      if (data.event === "LEADERBOARD_UPDATED") {
+        fetchRanks(); // 🔥 refetch leaderboard
+      }
+
+      if (data.event === "WINNER_UPDATED") {
+        fetchTopPlayers(); // 🔥 refetch winners
+      }
+    });
+
+    return () => socket.off("db-update");
   }, []);
 
   return (
@@ -48,17 +65,15 @@ const Page = () => {
         🏆 Leaderboard
       </h1>
 
-      {/* ================= MOST KILL PLAYERS SECTION ================= */}
+      {/* ================= MOST KILL PLAYERS ================= */}
       {!loading && !error && topPlayers.length > 0 && (
         <>
-          {/* 🔥 GROUP BADGE (ONE TIME ONLY) */}
           <div className="flex justify-center mb-4">
             <div className="flex items-center gap-2 bg-red-500 text-white px-6 py-2 rounded-full font-bold shadow-md">
               🔥 Most Kill Players
             </div>
           </div>
 
-          {/* PLAYER CARDS */}
           <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto mb-12">
             {topPlayers.map((player, idx) => (
               <div
@@ -88,22 +103,8 @@ const Page = () => {
         </>
       )}
 
-      {/* EMPTY STATE FOR TOP PLAYERS */}
-      {!loading && !error && topPlayers.length === 0 && (
-        <div className="text-center mb-12">
-          <p className="text-lg font-semibold text-slate-600">
-            📭 After match Data will appear..
-          </p>
-          <p className="text-sm text-slate-500">
-            Top players will appear once matches are completed.
-          </p>
-        </div>
-      )}
-
       {/* ================= LEADERBOARD TABLE ================= */}
       <div className="max-w-4xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        
-        {/* HEADER */}
         <div className="grid grid-cols-5 bg-slate-100 px-4 py-3 font-bold text-slate-600 text-sm">
           <div>Rank</div>
           <div>Player</div>
@@ -112,7 +113,6 @@ const Page = () => {
           <div>Points</div>
         </div>
 
-        {/* BODY */}
         {loading ? (
           <p className="text-center py-6 text-slate-500">
             Loading leaderboard...

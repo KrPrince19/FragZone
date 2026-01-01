@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
+import socket from "../../lib/socket"; // ✅ adjust path if needed
 
 const Page = () => {
   const { user, isLoaded } = useUser();
@@ -14,46 +15,65 @@ const Page = () => {
   const [error, setError] = useState(null);
 
   /* ================= FETCH UPCOMING TOURNAMENTS ================= */
-  useEffect(() => {
-    const fetchTournaments = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/upcomingtournament");
-        if (!res.ok) throw new Error("Failed to fetch tournaments");
-        const data = await res.json();
-        setUpcomingTournaments(data);
-      } catch (err) {
-        console.error(err);
-        setError("❌ Failed to fetch tournaments");
-      }
-    };
-
-    fetchTournaments();
-  }, []);
+  const fetchTournaments = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/upcomingtournament");
+      if (!res.ok) throw new Error("Failed to fetch tournaments");
+      const data = await res.json();
+      setUpcomingTournaments(data);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError("❌ Failed to fetch tournaments");
+    }
+  };
 
   /* ================= FETCH JOINED MATCHES ================= */
-  useEffect(() => {
+  const fetchJoined = async () => {
     if (!userEmail) {
       setLoading(false);
       return;
     }
 
-    const fetchJoined = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/joinmatches");
-        if (!res.ok) throw new Error("Failed to fetch joined matches");
-        const data = await res.json();
-        setJoinedMatches(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    try {
+      const res = await fetch("http://localhost:5000/joinmatches");
+      if (!res.ok) throw new Error("Failed to fetch joined matches");
+      const data = await res.json();
+      setJoinedMatches(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  /* ================= INITIAL LOAD ================= */
+  useEffect(() => {
+    fetchTournaments();
+  }, []);
+
+  useEffect(() => {
     fetchJoined();
   }, [userEmail]);
 
-  /* ================= JOIN CHECK (IMPORTANT) ================= */
+  /* ================= SOCKET LISTENER ================= */
+  useEffect(() => {
+    socket.on("db-update", (data) => {
+      // Admin adds upcoming tournament
+      if (data.event === "UPCOMING_TOURNAMENT_ADDED") {
+        fetchTournaments(); // 🔥 refetch ONCE
+      }
+
+      // User joins a match
+      if (data.event === "JOIN_MATCH") {
+        fetchJoined(); // 🔥 refetch joined status
+      }
+    });
+
+    return () => socket.off("db-update");
+  }, [userEmail]);
+
+  /* ================= JOIN CHECK ================= */
   const isJoined = (tournamentId) => {
     if (!userEmail) return false;
 

@@ -1,29 +1,43 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import socket from "../../lib/socket"; // ✅ adjust path if needed
 
 const Page = () => {
   const [winners, setWinners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  /* ================= FETCH WINNERS ================= */
+  const fetchWinners = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/winner");
+      if (!res.ok) throw new Error("Failed to fetch winners");
+      const data = await res.json();
+      setWinners(data);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError("❌ Failed to load winners");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ================= INITIAL LOAD ================= */
   useEffect(() => {
-    const fetchWinners = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/winner");
-        if (!res.ok) throw new Error("Failed to fetch winners");
-
-        const data = await res.json();
-        setWinners(data); // ✅ FIXED
-      } catch (err) {
-        console.error(err);
-        setError("❌ Failed to load winners");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchWinners();
+  }, []);
+
+  /* ================= SOCKET LISTENER ================= */
+  useEffect(() => {
+    socket.on("db-update", (data) => {
+      if (data.event === "WINNER_UPDATED") {
+        fetchWinners(); // 🔥 refetch ONCE
+      }
+    });
+
+    return () => socket.off("db-update");
   }, []);
 
   return (

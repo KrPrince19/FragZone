@@ -4,10 +4,12 @@ import Footer from "./components/Footer";
 import LeftSidebar from "./components/LeftSideBar";
 import RightSidebar from "./components/Rightsidebar";
 import { ClerkProvider } from "@clerk/nextjs";
+import SocketProvider from "./providers/SocketProvider";
 
 export default function RootLayout({ children }) {
   return (
       <ClerkProvider>
+        <SocketProvider>
     <html lang="en">
       <body className="bg-slate-50 text-slate-800">
         <Navbar />
@@ -28,6 +30,7 @@ export default function RootLayout({ children }) {
         <Footer />
       </body>
     </html>
+    </SocketProvider>
       </ClerkProvider>
   );
 }

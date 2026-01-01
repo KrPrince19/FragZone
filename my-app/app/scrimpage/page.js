@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { CalendarDays, Clock, Swords } from "lucide-react";
+import socket from "../../lib/socket"; // ✅ adjust path if needed
 
 /* =================================================
    SAFE STATUS CALCULATION (DATE + TIME)
@@ -10,10 +11,8 @@ const getScrimStatus = (startdate, time) => {
   if (!startdate || !time) return "upcoming";
 
   const now = new Date();
-
   let day, month, year;
 
-  // YYYY-MM-DD
   if (startdate.includes("-") && startdate.split("-")[0].length === 4) {
     [year, month, day] = startdate.split("-").map(Number);
   } else {
@@ -23,22 +22,13 @@ const getScrimStatus = (startdate, time) => {
     [day, month, year] = parts.map(Number);
   }
 
-  // TIME (AM / PM)
   const [timePart, period] = time.split(" ");
   let [hours, minutes] = timePart.split(":").map(Number);
 
   if (period === "PM" && hours !== 12) hours += 12;
   if (period === "AM" && hours === 12) hours = 0;
 
-  const scrimStart = new Date(
-    year,
-    month - 1,
-    day,
-    hours,
-    minutes,
-    0
-  );
-
+  const scrimStart = new Date(year, month - 1, day, hours, minutes, 0);
   const scrimEnd = new Date(scrimStart.getTime() + 60 * 60000);
 
   if (now < scrimStart) return "upcoming";
@@ -51,23 +41,39 @@ const Page = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  /* ================= FETCH DATA ================= */
-  useEffect(() => {
-    const fetchScrims = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/upcomingscrim");
-        if (!res.ok) throw new Error(`Server error ${res.status}`);
-        const data = await res.json();
-        setScrim(data);
-      } catch (err) {
-        console.error(err);
-        setError("❌ Failed to fetch scrims");
-      } finally {
-        setLoading(false);
-      }
-    };
+  /* ================= FETCH SCRIMS ================= */
+  const fetchScrims = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/upcomingscrim");
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const data = await res.json();
+      setScrim(data);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError("❌ Failed to fetch scrims");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  /* ================= INITIAL LOAD ================= */
+  useEffect(() => {
     fetchScrims();
+  }, []);
+
+  /* ================= SOCKET LISTENER ================= */
+  useEffect(() => {
+    socket.on("db-update", (data) => {
+      if (
+        data.event === "UPCOMING_SCRIM_ADDED" ||
+        data.event === "TOURNAMENT_ADDED"
+      ) {
+        fetchScrims(); // 🔥 KEY LINE (refetch)
+      }
+    });
+
+    return () => socket.off("db-update");
   }, []);
 
   return (
@@ -98,7 +104,7 @@ const Page = () => {
         </p>
       )}
 
-      {/* EMPTY STATE */}
+      {/* EMPTY */}
       {!loading && !error && upcomingScrim.length === 0 && (
         <div className="text-center mt-20">
           <p className="text-xl font-semibold text-slate-600">
@@ -114,10 +120,7 @@ const Page = () => {
       {!loading && !error && upcomingScrim.length > 0 && (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
           {upcomingScrim.map((scrim, index) => {
-            const status = getScrimStatus(
-              scrim.startdate,
-              scrim.time
-            );
+            const status = getScrimStatus(scrim.startdate, scrim.time);
 
             return (
               <div

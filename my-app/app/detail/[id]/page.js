@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import socket from "../../lib/socket"; // ✅ adjust path if needed
 
 export default function DetailPage() {
   const params = useParams();
@@ -9,24 +10,36 @@ export default function DetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  /* ================= FETCH TOURNAMENT DETAILS ================= */
+  const fetchTournamentDetails = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/tournamentdetail");
+      if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+      const data = await res.json();
+      setTournamentDetail(data);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch tournament data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ================= INITIAL LOAD ================= */
   useEffect(() => {
-    const fetchTournamentDetails = async () => {
-      try {
-             const res = await fetch("http://localhost:5000/tournamentdetail"
-        );
-
-        if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-        const data = await res.json();
-        setTournamentDetail(data);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to fetch tournament data.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchTournamentDetails();
+  }, []);
+
+  /* ================= SOCKET LISTENER ================= */
+  useEffect(() => {
+    socket.on("db-update", (data) => {
+      if (data.event === "TOURNAMENT_DETAIL_UPDATED") {
+        fetchTournamentDetails(); // 🔥 refetch ONCE
+      }
+    });
+
+    return () => socket.off("db-update");
   }, []);
 
   const tournament = tournamentDetail.find(
@@ -68,12 +81,10 @@ export default function DetailPage() {
 
         {/* DETAILS GRID */}
         <div className="grid sm:grid-cols-2 gap-6 text-slate-700">
-          
           <DetailItem label="Start Date" value={tournament.startdate} />
           <DetailItem label="End Date" value={tournament.enddate} />
           <DetailItem label="Map" value={tournament.map || "TBA"} />
           <DetailItem label="Prize Pool" value={tournament.prizePool || "TBA"} />
-
         </div>
       </div>
     </div>

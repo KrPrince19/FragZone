@@ -24,14 +24,27 @@ const LiveScrimSidebar = () => {
     fetchScrims();
   }, []);
 
- const getScrimStatus = (time) => {
-  if (!time) return "upcoming";
+const getScrimStatus = (date, time) => {
+  if (!date || !time) return "upcoming";
 
   const now = new Date();
 
+  /* ---------- PARSE DATE ---------- */
+  let day, month, year;
+
+  // YYYY-MM-DD
+  if (date.includes("-") && date.split("-")[0].length === 4) {
+    [year, month, day] = date.split("-").map(Number);
+  } 
+  // DD-MM-YYYY or DD/MM/YYYY
+  else {
+    const parts = date.includes("/") ? date.split("/") : date.split("-");
+    [day, month, year] = parts.map(Number);
+  }
+
+  /* ---------- PARSE TIME ---------- */
   let hours, minutes;
 
-  // Handle "1:04 am" or "10:30 pm"
   if (time.toLowerCase().includes("am") || time.toLowerCase().includes("pm")) {
     const [timePart, period] = time.toLowerCase().split(" ");
     let [h, m] = timePart.split(":").map(Number);
@@ -41,25 +54,34 @@ const LiveScrimSidebar = () => {
 
     hours = h;
     minutes = m;
-  } 
-  // Handle "13:04" (24-hour format)
-  else {
+  } else {
     [hours, minutes] = time.split(":").map(Number);
   }
 
-  const scrimTime = new Date();
-  scrimTime.setHours(hours, minutes, 0, 0);
+  /* ---------- CREATE SCRIM DATETIME ---------- */
+  const scrimStart = new Date(
+    year,
+    month - 1,
+    day,
+    hours,
+    minutes,
+    0
+  );
 
-  const diff = (scrimTime - now) / 60000; // minutes
+  const diffMinutes = (scrimStart - now) / 60000;
 
-  // 🔴 LIVE: started within last 40 minutes
-  if (diff <= 0 && diff >= -40) return "live";
+  /* ---------- STATUS LOGIC ---------- */
 
-  // ⏱ STARTING SOON: next 30 minutes
-  if (diff > 0 && diff <= 30) return "soon";
+  // 🔴 LIVE (started within last 40 min)
+  if (diffMinutes <= 0 && diffMinutes >= -40) return "live";
 
+  // ⏱ STARTING SOON (next 30 min)
+  if (diffMinutes > 0 && diffMinutes <= 30) return "soon";
+
+  // ❌ Past or far future
   return "upcoming";
 };
+
 
 
   const liveScrims = scrims.filter(
