@@ -2,7 +2,7 @@
 
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import UserDashboard from "../profile./UserDashboard";
+import UserDashboard from "./UserDashboard";
 
 export default async function Page() {
   const user = await currentUser();
