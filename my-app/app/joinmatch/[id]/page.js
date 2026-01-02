@@ -2,12 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { socket } from "@/lib/socket";
-
 
 const Page = () => {
   const params = useParams();
-  const router = useRouter(); // ✅ ADD
+  const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
@@ -26,18 +24,18 @@ const Page = () => {
 
   /* ---------------- Set Tournament Name ---------------- */
   useEffect(() => {
-    if (params.id) {
-      setForm((prev) => ({
-        ...prev,
-        tournamentName: params.id.toUpperCase(),
-      }));
-    }
-  }, [params]);
+    if (!params?.id) return;
+
+    setForm((prev) => ({
+      ...prev,
+      tournamentName: params.id.toUpperCase(),
+    }));
+  }, [params?.id]); // ✅ FIXED DEPENDENCY
 
   /* ---------------- Reset ---------------- */
   const handleReset = () => {
     setForm({
-      tournamentName: params.id ? params.id.toUpperCase() : "",
+      tournamentName: params?.id ? params.id.toUpperCase() : "",
       firstPlayer: "",
       secondPlayer: "",
       thirdPlayer: "",
@@ -83,24 +81,26 @@ const Page = () => {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/joinmatches", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+      const res = await fetch(
+        process.env.NEXT_PUBLIC_API_URL + "/joinmatches",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        }
+      );
 
       const data = await res.json();
 
       if (!res.ok) {
         setError(data.error || "❌ Something went wrong");
+        setLoading(false);
         return;
       }
 
-      // ✅ SUCCESS MESSAGE
       setSuccess("🎉 Joined successfully! Redirecting...");
       setLoading(false);
 
-      // ✅ REDIRECT AFTER 2 SECONDS
       setTimeout(() => {
         router.push("/profile");
       }, 2000);
@@ -121,7 +121,6 @@ const Page = () => {
           🎮 Join Scrim
         </h1>
 
-        {/* Tournament */}
         <div className="mb-6 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center">
           <p className="text-sm font-semibold text-slate-500 mb-1">
             Tournament
@@ -133,12 +132,12 @@ const Page = () => {
           />
         </div>
 
-        <Input label="First Player" name="firstPlayer" placeholder="Team Leader Name" value={form.firstPlayer} onChange={handleChange} />
-        <Input label="Second Player" name="secondPlayer" placeholder="Player 2 In-game Name" value={form.secondPlayer} onChange={handleChange} />
-        <Input label="Third Player" name="thirdPlayer" placeholder="Player 3 In-game Name" value={form.thirdPlayer} onChange={handleChange} />
-        <Input label="Fourth Player" name="fourthPlayer" placeholder="Player 4 In-game Name" value={form.fourthPlayer} onChange={handleChange} />
-        <Input label="Email" name="playerEmail" type="email" placeholder="Same as logged-in email" value={form.playerEmail} onChange={handleChange} />
-        <Input label="Mobile Number" name="playerMobileNumber" placeholder="Team Leader WhatsApp number" value={form.playerMobileNumber} onChange={handleChange} maxLength={10} />
+        <Input label="First Player" name="firstPlayer" value={form.firstPlayer} onChange={handleChange} />
+        <Input label="Second Player" name="secondPlayer" value={form.secondPlayer} onChange={handleChange} />
+        <Input label="Third Player" name="thirdPlayer" value={form.thirdPlayer} onChange={handleChange} />
+        <Input label="Fourth Player" name="fourthPlayer" value={form.fourthPlayer} onChange={handleChange} />
+        <Input label="Email" name="playerEmail" type="email" value={form.playerEmail} onChange={handleChange} />
+        <Input label="Mobile Number" name="playerMobileNumber" value={form.playerMobileNumber} onChange={handleChange} maxLength={10} />
 
         {mobileHint && (
           <p className={`text-sm mb-3 ${mobileHint.startsWith("✅") ? "text-green-600" : "text-orange-500"}`}>
