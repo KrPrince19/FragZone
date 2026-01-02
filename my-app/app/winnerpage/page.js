@@ -12,7 +12,7 @@ const Page = () => {
   /* ================= FETCH WINNERS ================= */
   const fetchWinners = async () => {
     try {
-      const res = await fetch("http://localhost:5000/winner");
+      const res = await fetch("https://bgmibackend-uc71.vercel.app/winner");
       if (!res.ok) throw new Error("Failed to fetch winners");
       const data = await res.json();
       setWinners(data);
