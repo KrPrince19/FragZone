@@ -16,7 +16,7 @@ export default function DetailPage() {
   /* ================= FETCH TOURNAMENT DETAILS ================= */
   const fetchTournamentDetails = async () => {
     try {
-      const res = await fetch("http://localhost:5000/tournamentdetail");
+      const res = await fetch("https://bgmibackend-uc71.vercel.app/tournamentdetail");
       if (!res.ok) throw new Error(`Server responded with ${res.status}`);
       const data = await res.json();
       setTournamentDetail(data);
