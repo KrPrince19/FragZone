@@ -36,7 +36,7 @@ const Page = () => {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/joinmatches");
+      const res = await fetch("https://bgmibackend-uc71.vercel.app/joinmatches");
       if (!res.ok) throw new Error("Failed to fetch joined matches");
       const data = await res.json();
       setJoinedMatches(data);
