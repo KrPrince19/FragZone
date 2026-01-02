@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { socket } from "@/lib/socket";
+import Image from "next/image";
 
 
 const Page = () => {
@@ -81,7 +82,7 @@ const Page = () => {
                 key={idx}
                 className="bg-white rounded-2xl shadow-md border border-slate-200 p-6 text-center"
               >
-                <img
+                <Image
                   src={`/mvpimage/${player.imgSrc}`}
                   alt={player.name || "Player"}
                   className="w-32 h-32 mx-auto rounded-full object-cover border-4 border-cyan-400"
