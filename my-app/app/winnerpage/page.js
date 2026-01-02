@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { socket } from "@/lib/socket";
+import Image from "next/image";
 
 const Page = () => {
   const [winners, setWinners] = useState([]);
@@ -90,7 +91,7 @@ const Page = () => {
               </div>
 
               {/* IMAGE */}
-              <img
+              <Image
                 src={`/mvpimage/${player.imgSrc}`}
                 alt={player.name || "Player"}
                 className="w-16 h-16 rounded-full object-cover border-2 border-cyan-400"
