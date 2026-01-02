@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 const Page = () => {
   const params = useParams();
   const router = useRouter();
+
+  const tournamentName = params?.id?.toUpperCase() || "";
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
@@ -13,7 +15,6 @@ const Page = () => {
   const [mobileHint, setMobileHint] = useState("");
 
   const [form, setForm] = useState({
-    tournamentName: "",
     firstPlayer: "",
     secondPlayer: "",
     thirdPlayer: "",
@@ -21,32 +22,6 @@ const Page = () => {
     playerEmail: "",
     playerMobileNumber: "",
   });
-
-  /* ---------------- Set Tournament Name ---------------- */
-  useEffect(() => {
-    if (!params?.id) return;
-
-    setForm((prev) => ({
-      ...prev,
-      tournamentName: params.id.toUpperCase(),
-    }));
-  }, [params?.id]); // ✅ FIXED DEPENDENCY
-
-  /* ---------------- Reset ---------------- */
-  const handleReset = () => {
-    setForm({
-      tournamentName: params?.id ? params.id.toUpperCase() : "",
-      firstPlayer: "",
-      secondPlayer: "",
-      thirdPlayer: "",
-      fourthPlayer: "",
-      playerEmail: "",
-      playerMobileNumber: "",
-    });
-    setError("");
-    setSuccess("");
-    setMobileHint("");
-  };
 
   /* ---------------- Change Handler ---------------- */
   const handleChange = (e) => {
@@ -86,7 +61,10 @@ const Page = () => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
+          body: JSON.stringify({
+            ...form,
+            tournamentName,
+          }),
         }
       );
 
@@ -104,7 +82,6 @@ const Page = () => {
       setTimeout(() => {
         router.push("/profile");
       }, 2000);
-
     } catch {
       setError("❌ Failed to connect to server");
       setLoading(false);
@@ -127,7 +104,7 @@ const Page = () => {
           </p>
           <input
             readOnly
-            value={form.tournamentName}
+            value={tournamentName}
             className="w-full text-center text-xl font-bold bg-transparent outline-none text-cyan-600"
           />
         </div>
