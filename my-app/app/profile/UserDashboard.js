@@ -14,7 +14,7 @@ export default function UserDashboard({ userEmail, name }) {
   /* ================= FETCH JOINED MATCHES ================= */
   const fetchTournamentDetails = async () => {
     try {
-      const res = await fetch("http://localhost:5000/joinmatches");
+      const res = await fetch("https://bgmibackend-uc71.vercel.app/joinmatches");
       if (!res.ok) throw new Error(`Server responded with ${res.status}`);
       const data = await res.json();
       setJoindata(data);
