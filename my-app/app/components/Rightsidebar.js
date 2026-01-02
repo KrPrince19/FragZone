@@ -11,7 +11,7 @@ const LiveScrimSidebar = () => {
   useEffect(() => {
     const fetchScrims = async () => {
       try {
-        const res = await fetch("https://bgmibackend-uc71.vercel.app/upcomingscrim");
+        const res = await fetch("https://bgmibackend.onrender.com/upcomingscrim");
         const data = await res.json();
         setScrims(data);
       } catch (err) {
