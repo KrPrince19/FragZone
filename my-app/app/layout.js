@@ -5,6 +5,8 @@ import LeftSidebar from "./components/LeftSideBar";
 import RightSidebar from "./components/Rightsidebar";
 import { ClerkProvider } from "@clerk/nextjs";
 import SocketProvider from "./providers/SocketProvider";
+import { socket } from "@/lib/socket";
+
 
 export default function RootLayout({ children }) {
   return (

@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { socket } from "@/lib/socket";
+
 
 const Page = () => {
   const params = useParams();

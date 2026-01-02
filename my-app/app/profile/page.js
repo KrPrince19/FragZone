@@ -3,6 +3,8 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import UserDashboard from "./UserDashboard";
+import { socket } from "@/lib/socket";
+
 
 export default async function Page() {
   const user = await currentUser();

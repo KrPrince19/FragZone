@@ -3,7 +3,9 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Trophy, CalendarDays, Users } from "lucide-react";
-import socket from "../../lib/socket"; // ✅ adjust path if needed
+import { socket } from "@/lib/socket";
+
+
 
 /* =====================================================
    TOURNAMENT STATUS (TODAY = LIVE | DATE ONLY)

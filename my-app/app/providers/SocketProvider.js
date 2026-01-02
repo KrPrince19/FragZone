@@ -1,6 +1,7 @@
 "use client";
 import { createContext } from "react";
-import socket from "../../lib/socket"; // ✅ FIXED PATH
+import { socket } from "@/lib/socket";
+
 
 export const SocketContext = createContext(null);
 

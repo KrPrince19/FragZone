@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { CalendarDays, Clock, Swords } from "lucide-react";
-import socket from "../../lib/socket"; // ✅ adjust path if needed
+import { socket } from "@/lib/socket";
+
 
 /* =================================================
    SAFE STATUS CALCULATION (DATE + TIME)

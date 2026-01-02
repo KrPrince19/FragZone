@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
-import socket from "../../lib/socket"; // ✅ adjust path if needed
+import { socket } from "@/lib/socket";
 
 const Page = () => {
   const { user, isLoaded } = useUser();

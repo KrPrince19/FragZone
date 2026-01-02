@@ -2,7 +2,8 @@
 
 import { UserButton } from "@clerk/nextjs";
 import React, { useEffect, useState } from "react";
-import socket from "../../lib/socket"; // ✅ adjust path if needed
+import { socket } from "@/lib/socket";
+
 
 export default function UserDashboard({ userEmail, name }) {
   const [Joindata, setJoindata] = useState([]);

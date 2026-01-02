@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import socket from "../../lib/socket"; // adjust path if needed
+import { socket } from "@/lib/socket";
+
 
 const Page = () => {
   const [rankData, setRankData] = useState([]);
