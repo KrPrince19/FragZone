@@ -45,7 +45,7 @@ const Page = () => {
   /* ================= FETCH SCRIMS ================= */
   const fetchScrims = async () => {
     try {
-      const res = await fetch("http://localhost:5000/upcomingscrim");
+      const res = await fetch("https://bgmibackend-uc71.vercel.app/upcomingscrim");
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       const data = await res.json();
       setScrim(data);
