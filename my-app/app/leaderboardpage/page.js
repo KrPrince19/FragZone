@@ -14,7 +14,7 @@ const Page = () => {
   /* ================= FETCH LEADERBOARD ================= */
   const fetchRanks = async () => {
     try {
-      const res = await fetch("http://localhost:5000/leaderboard");
+      const res = await fetch("https://bgmibackend-uc71.vercel.app/leaderboard");
       if (!res.ok) throw new Error("Failed to fetch leaderboard");
       const data = await res.json();
       setRankData(data);
@@ -29,7 +29,7 @@ const Page = () => {
   /* ================= FETCH TOP PLAYERS ================= */
   const fetchTopPlayers = async () => {
     try {
-      const res = await fetch("http://localhost:5000/winner");
+      const res = await fetch("https://bgmibackend-uc71.vercel.app/winner");
       if (!res.ok) throw new Error("Failed to fetch top players");
       const data = await res.json();
       setTopPlayers(data.slice(0, 3));
