@@ -83,15 +83,15 @@ const Page = () => {
   }, []);
 
   /* ================= SOCKET LISTENER ================= */
-  useEffect(() => {
-    socket.on("db-update", (data) => {
-      if (data.event === "TOURNAMENT_ADDED") {
-        fetchTournaments(); // 🔥 refetch ONCE
-      }
-    });
+  // useEffect(() => {
+  //   socket.on("db-update", (data) => {
+  //     if (data.event === "TOURNAMENT_ADDED") {
+  //       fetchTournaments(); // 🔥 refetch ONCE
+  //     }
+  //   });
 
-    return () => socket.off("db-update");
-  }, []);
+  //   return () => socket.off("db-update");
+  // }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 space-y-6 px-4 py-6">
