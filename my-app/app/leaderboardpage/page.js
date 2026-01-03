@@ -14,7 +14,7 @@ const Page = () => {
   /* ================= FETCH LEADERBOARD ================= */
   const fetchRanks = async () => {
     try {
-      const res = await fetch("https://bgmibackend.onrender.com/leaderboard");
+      const res = await fetch("https://bgmibackend.vercel.app/leaderboard");
       if (!res.ok) throw new Error("Failed to fetch leaderboard");
       const data = await res.json();
       setRankData(data);
