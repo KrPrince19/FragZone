@@ -64,7 +64,7 @@ const Page = () => {
   /* ================= FETCH TOURNAMENTS ================= */
   const fetchTournaments = async () => {
     try {
-      const res = await fetch("https://bgmibackend.vercel.app/tournament");
+      const res = await fetch("https://bgmibackend-1.onrender.com/tournament");
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       const data = await res.json();
       setTournaments(data);
