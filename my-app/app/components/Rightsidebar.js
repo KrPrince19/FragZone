@@ -8,6 +8,27 @@ const LiveScrimSidebar = () => {
   const [scrims, setScrims] = useState([]);
   const [loading, setLoading] = useState(true);
 
+<<<<<<< HEAD
+useEffect(() => {
+  const fetchScrims = async () => {
+    try {
+      const res = await fetch("https://bgmibackend-1.onrender.com/upcomingscrim");
+      const data = await res.json();
+
+      console.log("Scrim API:", data);
+
+      setScrims(Array.isArray(data) ? data : data.data || []);
+    } catch (err) {
+      console.error("Failed to fetch scrims", err);
+      setScrims([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchScrims();
+}, []);
+=======
   useEffect(() => {
     const fetchScrims = async () => {
       try {
@@ -20,9 +41,8 @@ const LiveScrimSidebar = () => {
         setLoading(false);
       }
     };
+>>>>>>> 9ccd1ca165dac25d25b0dfa5217a496c2b2f1d0a
 
-    fetchScrims();
-  }, []);
 
 const getScrimStatus = (date, time) => {
   if (!date || !time) return "upcoming";
