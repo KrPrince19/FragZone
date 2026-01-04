@@ -4,7 +4,6 @@ import { UserButton } from "@clerk/nextjs";
 import React, { useEffect, useState } from "react";
 import { socket } from "@/lib/socket";
 
-
 export default function UserDashboard({ userEmail, name }) {
   const [Joindata, setJoindata] = useState([]);
   const [tournament, setTournament] = useState(null);
@@ -14,12 +13,12 @@ export default function UserDashboard({ userEmail, name }) {
   /* ================= FETCH JOINED MATCHES ================= */
   const fetchTournamentDetails = async () => {
     try {
-<<<<<<< HEAD
-      const res = await fetch("https://bgmibackend-1.onrender.com/joinmatches");
-=======
-      const res = await fetch("https://bgmibackend.vercel.app/joinmatches");
->>>>>>> 9ccd1ca165dac25d25b0dfa5217a496c2b2f1d0a
+      const res = await fetch(
+        "https://bgmibackend-1.onrender.com/joinmatches"
+      );
+
       if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+
       const data = await res.json();
       setJoindata(data);
       setError(null);
@@ -38,13 +37,14 @@ export default function UserDashboard({ userEmail, name }) {
 
   /* ================= SOCKET LISTENER ================= */
   useEffect(() => {
-    socket.on("db-update", (data) => {
+    const handler = (data) => {
       if (data.event === "JOIN_MATCH") {
-        fetchTournamentDetails(); // 🔥 refetch ONCE
+        fetchTournamentDetails();
       }
-    });
+    };
 
-    return () => socket.off("db-update");
+    socket.on("db-update", handler);
+    return () => socket.off("db-update", handler);
   }, []);
 
   /* ================= FIND USER MATCH ================= */
@@ -89,12 +89,11 @@ export default function UserDashboard({ userEmail, name }) {
           </h1>
 
           <p className="text-slate-600 mb-4">
-            Welcome to <span className="font-semibold text-cyan-600">FragZone</span>
+            Welcome to{" "}
+            <span className="font-semibold text-cyan-600">FragZone</span>
           </p>
 
-          <p className="text-sm text-red-500">
-            No joined match found for
-          </p>
+          <p className="text-sm text-red-500">No joined match found for</p>
           <p className="text-sm font-semibold text-slate-700 mt-1">
             {userEmail}
           </p>
@@ -115,7 +114,8 @@ export default function UserDashboard({ userEmail, name }) {
             Hi, {name} 👋
           </h1>
           <p className="text-slate-500">
-            Welcome to <span className="text-cyan-600 font-semibold">FragZone</span>
+            Welcome to{" "}
+            <span className="text-cyan-600 font-semibold">FragZone</span>
           </p>
         </div>
 
@@ -135,7 +135,7 @@ export default function UserDashboard({ userEmail, name }) {
         {/* WHATSAPP INFO */}
         <div className="mt-6 text-center">
           <p className="text-orange-500 font-semibold mb-4">
-            📢 Room ID & Password will be shared on WhatsApp  
+            📢 Room ID & Password will be shared on WhatsApp
             <br />
             15 minutes before match starts
           </p>
