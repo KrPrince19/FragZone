@@ -14,7 +14,11 @@ const Page = () => {
   /* ================= FETCH LEADERBOARD ================= */
   const fetchRanks = async () => {
     try {
+<<<<<<< HEAD
+      const res = await fetch("https://bgmibackend-1.onrender.com/leaderboard");
+=======
       const res = await fetch("https://bgmibackend.vercel.app/leaderboard");
+>>>>>>> 9ccd1ca165dac25d25b0dfa5217a496c2b2f1d0a
       if (!res.ok) throw new Error("Failed to fetch leaderboard");
       const data = await res.json();
       setRankData(data);
@@ -29,7 +33,11 @@ const Page = () => {
   /* ================= FETCH TOP PLAYERS ================= */
   const fetchTopPlayers = async () => {
     try {
+<<<<<<< HEAD
+      const res = await fetch("https://bgmibackend-1.onrender.com/winner");
+=======
       const res = await fetch("https://bgmibackend-uc71.vercel.app/winner");
+>>>>>>> 9ccd1ca165dac25d25b0dfa5217a496c2b2f1d0a
       if (!res.ok) throw new Error("Failed to fetch top players");
       const data = await res.json();
       setTopPlayers(data.slice(0, 3));
