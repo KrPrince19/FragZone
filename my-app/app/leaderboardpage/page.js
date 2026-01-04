@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { socket } from "@/lib/socket";
 import Image from "next/image";
 
-
 const Page = () => {
   const [rankData, setRankData] = useState([]);
   const [topPlayers, setTopPlayers] = useState([]);
@@ -14,12 +13,11 @@ const Page = () => {
   /* ================= FETCH LEADERBOARD ================= */
   const fetchRanks = async () => {
     try {
-<<<<<<< HEAD
-      const res = await fetch("https://bgmibackend-1.onrender.com/leaderboard");
-=======
-      const res = await fetch("https://bgmibackend.vercel.app/leaderboard");
->>>>>>> 9ccd1ca165dac25d25b0dfa5217a496c2b2f1d0a
+      const res = await fetch(
+        "https://bgmibackend-1.onrender.com/leaderboard"
+      );
       if (!res.ok) throw new Error("Failed to fetch leaderboard");
+
       const data = await res.json();
       setRankData(data);
       setError(null);
@@ -33,12 +31,11 @@ const Page = () => {
   /* ================= FETCH TOP PLAYERS ================= */
   const fetchTopPlayers = async () => {
     try {
-<<<<<<< HEAD
-      const res = await fetch("https://bgmibackend-1.onrender.com/winner");
-=======
-      const res = await fetch("https://bgmibackend-uc71.vercel.app/winner");
->>>>>>> 9ccd1ca165dac25d25b0dfa5217a496c2b2f1d0a
+      const res = await fetch(
+        "https://bgmibackend-1.onrender.com/winner"
+      );
       if (!res.ok) throw new Error("Failed to fetch top players");
+
       const data = await res.json();
       setTopPlayers(data.slice(0, 3));
     } catch (err) {
@@ -54,22 +51,21 @@ const Page = () => {
 
   /* ================= SOCKET LISTENER ================= */
   useEffect(() => {
-    socket.on("db-update", (data) => {
+    const handler = (data) => {
       if (data.event === "LEADERBOARD_UPDATED") {
-        fetchRanks(); // 🔥 refetch leaderboard
+        fetchRanks();
       }
-
       if (data.event === "WINNER_UPDATED") {
-        fetchTopPlayers(); // 🔥 refetch winners
+        fetchTopPlayers();
       }
-    });
+    };
 
-    return () => socket.off("db-update");
+    socket.on("db-update", handler);
+    return () => socket.off("db-update", handler);
   }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-6 lg:px-10">
-      
       {/* TITLE */}
       <h1 className="text-3xl md:text-4xl font-extrabold text-center text-slate-800 mb-8">
         🏆 Leaderboard
@@ -93,7 +89,9 @@ const Page = () => {
                 <Image
                   src={`/mvpimage/${player.imgSrc}`}
                   alt={player.name || "Player"}
-                  className="w-32 h-32 mx-auto rounded-full object-cover border-4 border-cyan-400"
+                  width={128}
+                  height={128}
+                  className="mx-auto rounded-full object-cover border-4 border-cyan-400"
                 />
 
                 <h2 className="mt-4 text-xl font-bold text-slate-800">
@@ -128,9 +126,7 @@ const Page = () => {
             Loading leaderboard...
           </p>
         ) : error ? (
-          <p className="text-center text-red-500 py-6">
-            {error}
-          </p>
+          <p className="text-center text-red-500 py-6">{error}</p>
         ) : rankData.length === 0 ? (
           <p className="text-center py-6 text-slate-500">
             📭 Leaderboard data not available yet
