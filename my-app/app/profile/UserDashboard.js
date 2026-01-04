@@ -157,6 +157,9 @@ export default function UserDashboard({ userEmail, name }) {
 }
 
 /* ================= SMALL COMPONENT ================= */
+);
+
+/* ================= SMALL COMPONENT ================= */
 const Detail = ({ label, value }) => (
   <div className="flex justify-between items-center border-b border-slate-200 py-3 last:border-none">
     <span className="font-semibold text-slate-600">{label}</span>
@@ -165,3 +168,5 @@ const Detail = ({ label, value }) => (
     </span>
   </div>
 );
+
+
