@@ -56,17 +56,18 @@ const Page = () => {
     setLoading(true);
 
     try {
-      const res = await fetch(
-      https://bgmibackend-1.onrender.com + "/joinmatches",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...form,
-            tournamentName,
-          }),
-        }
-      );
+    const res = await fetch(
+  "https://bgmibackend-1.onrender.com/joinmatches",
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...form,
+      tournamentName,
+    }),
+  }
+);
+
 
       const data = await res.json();
 
