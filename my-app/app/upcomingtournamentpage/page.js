@@ -17,7 +17,7 @@ const Page = () => {
   /* ================= FETCH UPCOMING TOURNAMENTS ================= */
   const fetchTournaments = async () => {
     try {
-      const res = await fetch("http://localhost:5000/upcomingtournament");
+      const res = await fetch("https://bgmibackend-1.onrender.com/upcomingtournament");
       if (!res.ok) throw new Error("Failed to fetch tournaments");
       const data = await res.json();
       setUpcomingTournaments(data);
