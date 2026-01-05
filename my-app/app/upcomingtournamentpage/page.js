@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import { socket } from "@/lib/socket";
@@ -15,12 +15,17 @@ const Page = () => {
   const [error, setError] = useState(null);
 
   /* ================= FETCH UPCOMING TOURNAMENTS ================= */
-  const fetchTournaments = async () => {
+  const fetchTournaments = useCallback(async () => {
     try {
-      const res = await fetch("https://bgmibackend-1.onrender.com/upcomingtournament");
-      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const res = await fetch(
+        "https://bgmibackend-1.onrender.com/upcomingtournament",
+        { cache: "no-store" }
+      );
+
+      if (!res.ok) throw new Error("Fetch failed");
+
       const data = await res.json();
-      setTournaments(data);
+      setUpcomingTournaments(data);
       setError(null);
     } catch (err) {
       console.error(err);
@@ -28,72 +33,74 @@ const Page = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   /* ================= FETCH JOINED MATCHES ================= */
-  const fetchJoined = async () => {
-    if (!userEmail) {
-      setLoading(false);
-      return;
-    }
+  const fetchJoined = useCallback(async () => {
+    if (!userEmail) return;
 
     try {
-      const res = await fetch("https://bgmibackend-1.onrender.com/joinmatches");
-      if (!res.ok) throw new Error("Failed to fetch joined matches");
+      const res = await fetch(
+        "https://bgmibackend-1.onrender.com/joinmatches",
+        { cache: "no-store" }
+      );
+
+      if (!res.ok) throw new Error("Fetch failed");
+
       const data = await res.json();
       setJoinedMatches(data);
     } catch (err) {
       console.error(err);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [userEmail]);
 
   /* ================= INITIAL LOAD ================= */
   useEffect(() => {
     fetchTournaments();
-  }, []);
+  }, [fetchTournaments]);
 
   useEffect(() => {
     fetchJoined();
-  }, [userEmail]);
+  }, [fetchJoined]);
 
-  /* ================= SOCKET LISTENER ================= */
+  /* ================= SOCKET.IO LISTENER (FIXED) ================= */
   useEffect(() => {
-    socket.on("db-update", (data) => {
-      // Admin adds upcoming tournament
-      if (data.event === "UPCOMING_TOURNAMENT_ADDED") {
-        fetchTournaments(); // 🔥 refetch ONCE
+    const handler = (data) => {
+      // 🔥 Admin adds new tournament
+      if (data.event === "TOURNAMENT_ADDED") {
+        fetchTournaments();
       }
 
-      // User joins a match
+      // 🔥 User joins a match
       if (data.event === "JOIN_MATCH") {
-        fetchJoined(); // 🔥 refetch joined status
+        fetchJoined();
       }
-    });
+    };
 
-    return () => socket.off("db-update");
-  }, [userEmail]);
+    socket.on("db-update", handler);
+
+    return () => {
+      socket.off("db-update", handler);
+    };
+  }, [fetchTournaments, fetchJoined]);
 
   /* ================= JOIN CHECK ================= */
   const isJoined = (tournamentId) => {
     if (!userEmail) return false;
 
-    return joinedMatches.some((j) => {
-      return (
-        j.playerEmail?.trim().toLowerCase() ===
-          userEmail.trim().toLowerCase() &&
-        j.tournamentName?.trim().toUpperCase() ===
-          tournamentId.trim().toUpperCase()
-      );
-    });
+    return joinedMatches.some(
+      (j) =>
+        j.playerEmail?.toLowerCase().trim() ===
+          userEmail.toLowerCase().trim() &&
+        j.tournamentName?.toUpperCase().trim() ===
+          tournamentId.toUpperCase().trim()
+    );
   };
 
   if (!isLoaded) return null;
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-6 lg:px-10">
-
       {/* HEADER */}
       <div className="flex justify-center mb-8">
         <span className="text-sm md:text-xl font-bold text-cyan-600 underline">
@@ -107,9 +114,7 @@ const Page = () => {
           Loading tournaments...
         </p>
       ) : error ? (
-        <p className="text-center text-red-500">
-          {error}
-        </p>
+        <p className="text-center text-red-500">{error}</p>
       ) : upcomingTournaments.length === 0 ? (
         <div className="text-center mt-20">
           <p className="text-xl font-semibold text-slate-600">
@@ -139,7 +144,7 @@ const Page = () => {
                     className="text-xl md:text-2xl font-bold text-slate-800
                                hover:text-cyan-600 hover:underline"
                   >
-                    {tournament.name.toUpperCase()}
+                    {tournament.name?.toUpperCase()}
                   </Link>
 
                   <div className="flex gap-6 mt-4 text-sm text-slate-600">

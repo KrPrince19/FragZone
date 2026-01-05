@@ -1,172 +1,151 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { CalendarDays, Clock, Swords } from "lucide-react";
+import React, { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import { CalendarDays, Swords, Users } from "lucide-react";
 import { socket } from "@/lib/socket";
 
+/* ================= STATUS (TOURNAMENT LOGIC) ================= */
+const getTournamentStatus = (startdate, enddate) => {
+  if (!startdate || !enddate) return "upcoming";
 
-/* =================================================
-   SAFE STATUS CALCULATION (DATE + TIME)
-================================================= */
-const getScrimStatus = (startdate, time) => {
-  if (!startdate || !time) return "upcoming";
+  const parse = (d) => {
+    const p = d.includes("/") ? d.split("/") : d.split("-");
+    return p[0].length === 4
+      ? new Date(p[0], p[1] - 1, p[2])
+      : new Date(p[2], p[1] - 1, p[0]);
+  };
 
   const now = new Date();
-  let day, month, year;
+  const s = parse(startdate);
+  const e = parse(enddate);
 
-  if (startdate.includes("-") && startdate.split("-")[0].length === 4) {
-    [year, month, day] = startdate.split("-").map(Number);
-  } else {
-    const parts = startdate.includes("/")
-      ? startdate.split("/")
-      : startdate.split("-");
-    [day, month, year] = parts.map(Number);
-  }
-
-  const [timePart, period] = time.split(" ");
-  let [hours, minutes] = timePart.split(":").map(Number);
-
-  if (period === "PM" && hours !== 12) hours += 12;
-  if (period === "AM" && hours === 12) hours = 0;
-
-  const scrimStart = new Date(year, month - 1, day, hours, minutes, 0);
-  const scrimEnd = new Date(scrimStart.getTime() + 60 * 60000);
-
-  if (now < scrimStart) return "upcoming";
-  if (now >= scrimStart && now <= scrimEnd) return "live";
-  return "passed";
+  if (now < s) return "upcoming";
+  if (now > e) return "passed";
+  return "live";
 };
 
-const Page = () => {
-  const [upcomingScrim, setScrim] = useState([]);
+export default function Page() {
+  const [Upcomingscrims, setUpcomigscrims] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  /* ================= FETCH SCRIMS ================= */
-  const fetchScrims = async () => {
+  /* ================= FETCH TOURNAMENTS ================= */
+  const fetchTournaments = useCallback(async () => {
     try {
-      const res = await fetch("https://bgmibackend-1.onrender.com/upcomingscrim");
-      if (!res.ok) throw new Error(`Server error ${res.status}`);
-      const data = await res.json();
-      setScrim(data);
+      const res = await fetch(
+        "https://bgmibackend-1.onrender.com/upcomingscrim",
+        { cache: "no-store" }
+      );
+      if (!res.ok) throw new Error("Fetch failed");
+
+      setUpcomigscrims(await res.json());
       setError(null);
-    } catch (err) {
-      console.error(err);
-      setError("❌ Failed to fetch scrims");
+    } catch {
+      setError("❌ Failed to fetch Upcomingscrims");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   /* ================= INITIAL LOAD ================= */
   useEffect(() => {
-    fetchScrims();
-  }, []);
+    fetchTournaments();
+  }, [fetchTournaments]);
 
-  /* ================= SOCKET LISTENER ================= */
+  /* ================= SOCKET.IO ================= */
   useEffect(() => {
-    socket.on("db-update", (data) => {
-      if (
-        data.event === "UPCOMING_SCRIM_ADDED" ||
-        data.event === "TOURNAMENT_ADDED"
-      ) {
-        fetchScrims(); // 🔥 KEY LINE (refetch)
+    const handler = (data) => {
+      if (data.event === "TOURNAMENT_ADDED") {
+        fetchTournaments();
       }
-    });
+    };
 
-    return () => socket.off("db-update");
-  }, []);
+    socket.on("db-update", handler);
+    return () => socket.off("db-update", handler);
+  }, [fetchTournaments]);
 
   return (
     <div className="min-h-screen bg-slate-50 space-y-6 px-4 py-6">
 
-      {/* HEADER */}
+      {/* HEADER (SCRIM STYLE) */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-extrabold text-cyan-600 flex items-center gap-2">
           <Swords className="w-7 h-7" />
-          Scrims
+          Tournaments
         </h1>
         <span className="text-sm text-slate-500">
-          Practice • Compete • Improve
+          Compete • Win • Glory
         </span>
       </div>
 
-      {/* LOADING */}
       {loading && (
-        <p className="text-center text-slate-500">
-          Loading scrims...
-        </p>
+        <p className="text-center text-slate-500">Loading Upcomingscrims...</p>
       )}
 
-      {/* ERROR */}
       {error && (
-        <p className="text-center text-red-500">
-          {error}
+        <p className="text-center text-red-500">{error}</p>
+      )}
+
+      {!loading && !error && Upcomingscrims.length === 0 && (
+        <p className="text-center mt-20 text-slate-500">
+          📭 No Upcomingscrims available
         </p>
       )}
 
-      {/* EMPTY */}
-      {!loading && !error && upcomingScrim.length === 0 && (
-        <div className="text-center mt-20">
-          <p className="text-xl font-semibold text-slate-600">
-            📭 No scrims available
-          </p>
-          <p className="text-sm text-slate-500 mt-2">
-            New scrims will appear here soon. Stay tuned!
-          </p>
-        </div>
-      )}
-
-      {/* SCRIM CARDS */}
-      {!loading && !error && upcomingScrim.length > 0 && (
+      {/* ===== SCRIM STYLE CARDS ===== */}
+      {!loading && !error && Upcomingscrims.length > 0 && (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {upcomingScrim.map((scrim, index) => {
-            const status = getScrimStatus(scrim.startdate, scrim.time);
+          {Upcomingscrims.map((t, index) => {
+            const status = getTournamentStatus(t.startdate, t.enddate);
 
             return (
               <div
                 key={index}
-                className="bg-white border border-slate-200 rounded-2xl p-6
-                           shadow-sm hover:shadow-md hover:border-cyan-400
-                           transition-all"
+                className="bg-white border rounded-2xl p-6 shadow-sm
+                           hover:shadow-md hover:border-cyan-400 transition-all"
               >
-                <h2 className="text-xl font-bold text-slate-800 mb-4">
-                  {(scrim.name || "UNKNOWN SCRIM").toUpperCase()}
+                <h2 className="text-xl font-bold mb-4">
+                  {(t.name || "UNKNOWN TOURNAMENT").toUpperCase()}
                 </h2>
 
-                <div className="space-y-3 text-slate-600 text-sm">
-                  <div className="flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4 text-cyan-500" />
-                    <span>{scrim.startdate || "TBA"}</span>
+                <div className="text-sm text-slate-600 space-y-2">
+                  <div className="flex gap-2">
+                    <CalendarDays size={14} />
+                    {t.startdate} – {t.enddate}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-cyan-500" />
-                    <span>{scrim.time || "TBA"}</span>
+                  <div className="flex gap-2">
+                    <Users size={14} />
+                    Slots: {t.slots || "Limited"}
                   </div>
                 </div>
 
-                <div className="mt-5">
-                  {status === "upcoming" && (
-                    <span className="inline-block text-xs font-bold px-3 py-1 rounded-full
-                                     bg-cyan-100 text-cyan-700">
-                      ⏳ Upcoming
-                    </span>
-                  )}
+                <div className="mt-4 flex items-center justify-between">
+                  <div>
+                    {status === "live" && (
+                      <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
+                        🟢 LIVE
+                      </span>
+                    )}
+                    {status === "upcoming" && (
+                      <span className="bg-cyan-100 text-cyan-700 px-3 py-1 rounded-full text-xs font-bold">
+                        ⏳ UPCOMING
+                      </span>
+                    )}
+                    {status === "passed" && (
+                      <span className="bg-slate-200 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">
+                        ⚫ PASSED
+                      </span>
+                    )}
+                  </div>
 
-                  {status === "live" && (
-                    <span className="inline-block text-xs font-bold px-3 py-1 rounded-full
-                                     bg-red-100 text-red-700 animate-pulse">
-                      🔴 Live
-                    </span>
-                  )}
-
-                  {status === "passed" && (
-                    <span className="inline-block text-xs font-bold px-3 py-1 rounded-full
-                                     bg-slate-200 text-slate-600">
-                      ⚫ Passed
-                    </span>
-                  )}
+                  <Link
+                    href={`/detail/${t.tournamentId}`}
+                    className="text-cyan-600 text-sm font-semibold"
+                  >
+                    View
+                  </Link>
                 </div>
               </div>
             );
@@ -175,6 +154,4 @@ const Page = () => {
       )}
     </div>
   );
-};
-
-export default Page;
+}

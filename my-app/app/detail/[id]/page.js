@@ -1,23 +1,26 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { socket } from "../../../lib/socket";
-
-
-
 
 export default function DetailPage() {
   const params = useParams();
+
   const [tournamentDetail, setTournamentDetail] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   /* ================= FETCH TOURNAMENT DETAILS ================= */
-  const fetchTournamentDetails = async () => {
+  const fetchTournamentDetails = useCallback(async () => {
     try {
-      const res = await fetch("https://bgmibackend-1.onrender.com/tournamentdetail");
+      const res = await fetch(
+        "https://bgmibackend-1.onrender.com/tournamentdetail",
+        { cache: "no-store" }
+      );
+
       if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+
       const data = await res.json();
       setTournamentDetail(data);
       setError(null);
@@ -27,26 +30,31 @@ export default function DetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   /* ================= INITIAL LOAD ================= */
   useEffect(() => {
     fetchTournamentDetails();
-  }, []);
+  }, [fetchTournamentDetails]);
 
-  /* ================= SOCKET LISTENER ================= */
+  /* ================= SOCKET.IO LISTENER ================= */
   useEffect(() => {
-    socket.on("db-update", (data) => {
+    const handler = (data) => {
       if (data.event === "TOURNAMENT_DETAIL_UPDATED") {
-        fetchTournamentDetails(); // 🔥 refetch ONCE
+        fetchTournamentDetails(); // 🔥 realtime update
       }
-    });
+    };
 
-    return () => socket.off("db-update");
-  }, []);
+    socket.on("db-update", handler);
+
+    return () => {
+      socket.off("db-update", handler);
+    };
+  }, [fetchTournamentDetails]);
 
   const tournament = tournamentDetail.find(
-    (t) => String(t.tournamentId).trim() === String(params.id).trim()
+    (t) =>
+      String(t.tournamentId).trim() === String(params.id).trim()
   );
 
   if (loading) {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { socket } from "@/lib/socket";
 import Image from "next/image";
 
@@ -10,10 +10,14 @@ const Page = () => {
   const [error, setError] = useState(null);
 
   /* ================= FETCH WINNERS ================= */
-  const fetchWinners = async () => {
+  const fetchWinners = useCallback(async () => {
     try {
-      const res = await fetch("https://bgmibackend-1.onrender.com/winner");
-      if (!res.ok) throw new Error("Failed to fetch winners");
+      const res = await fetch(
+        "https://bgmibackend-1.onrender.com/winner",
+        { cache: "no-store" }
+      );
+      if (!res.ok) throw new Error("Fetch failed");
+      
       const data = await res.json();
       setWinners(data);
       setError(null);
@@ -23,44 +27,61 @@ const Page = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   /* ================= INITIAL LOAD ================= */
   useEffect(() => {
     fetchWinners();
-  }, []);
+  }, [fetchWinners]);
 
-  /* ================= SOCKET LISTENER ================= */
+  /* ================= SOCKET.IO LISTENER ================= */
+  // Integrated logic: Listens for tournament updates AND winner updates
   useEffect(() => {
-    socket.on("db-update", (data) => {
-      if (data.event === "WINNER_UPDATED") {
-        fetchWinners(); // 🔥 refetch ONCE
-      }
-    });
+    const handler = (data) => {
+      const shouldRefresh = 
+        data.event === "WINNER_UPDATED" ||
+        data.event === "RESULT_PUBLISHED" ||
+        data.event === "TOURNAMENT_ADDED"; // Added from Tournament page logic
 
-    return () => socket.off("db-update");
-  }, []);
+      if (shouldRefresh) {
+        console.log(`Real-time refresh triggered by: ${data.event}`);
+        fetchWinners(); 
+      }
+    };
+
+    socket.on("db-update", handler);
+    
+    // Cleanup listener on unmount to prevent memory leaks
+    return () => {
+      socket.off("db-update", handler);
+    };
+  }, [fetchWinners]);
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-6 lg:px-10">
-
       {/* TITLE */}
       <h1 className="text-3xl md:text-4xl font-extrabold text-center text-slate-800 mb-8">
         🏆 Winners
       </h1>
 
-      {/* LOADING */}
+      {/* LOADING STATE */}
       {loading && (
-        <p className="text-center text-slate-500">
+        <p className="text-center text-slate-500 animate-pulse">
           Loading winners...
         </p>
       )}
 
-      {/* ERROR */}
+      {/* ERROR STATE */}
       {error && (
-        <p className="text-center text-red-500">
-          {error}
-        </p>
+        <div className="text-center">
+          <p className="text-red-500 font-medium">{error}</p>
+          <button 
+            onClick={() => fetchWinners()}
+            className="mt-4 text-cyan-600 underline text-sm"
+          >
+            Try Again
+          </button>
+        </div>
       )}
 
       {/* EMPTY STATE */}
@@ -70,20 +91,20 @@ const Page = () => {
             📭 No winners declared yet
           </p>
           <p className="text-sm text-slate-500 mt-2">
-            Winners will appear after match results are published.
+            Winners will appear after results are published.
           </p>
         </div>
       )}
 
-      {/* WINNER LIST */}
+      {/* WINNERS LIST */}
       {!loading && !error && winners.length > 0 && (
         <div className="max-w-3xl mx-auto space-y-4">
           {winners.map((player, index) => (
             <div
               key={index}
-              className="bg-white border border-slate-200 rounded-2xl
-                         shadow-sm hover:shadow-md transition
-                         flex items-center gap-5 p-4"
+              className="bg-white border rounded-2xl p-4
+                         flex items-center gap-5
+                         shadow-sm hover:shadow-md transition-all duration-300"
             >
               {/* RANK */}
               <div className="text-3xl font-extrabold text-amber-500 w-10 text-center">
@@ -91,25 +112,28 @@ const Page = () => {
               </div>
 
               {/* IMAGE */}
-              <Image
-                src={`/mvpimage/${player.imgSrc}`}
-                alt={player.name || "Player"}
-                className="w-16 h-16 rounded-full object-cover border-2 border-cyan-400"
-              />
+              <div className="relative w-16 h-16">
+                <Image
+                  src={`/mvpimage/${player.imgSrc}`}
+                  alt={player.name || "Player"}
+                  fill
+                  className="rounded-full object-cover border-2 border-cyan-400"
+                />
+              </div>
 
               {/* DETAILS */}
               <div className="flex-1">
                 <h2 className="text-lg font-bold text-slate-800">
                   {(player.name || "UNKNOWN").toUpperCase()}
                 </h2>
-                <p className="text-slate-500 text-sm">
+                <p className="text-sm text-slate-500">
                   Team: {player.teamname || "N/A"}
                 </p>
               </div>
 
               {/* STATS */}
               <div className="text-right">
-                <p className="text-emerald-600 font-bold">
+                <p className="font-bold text-emerald-600">
                   Kills: {player.kill ?? 0}
                 </p>
               </div>
