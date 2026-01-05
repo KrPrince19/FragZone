@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CalendarDays, Swords, Users } from "lucide-react";
 import { socket } from "@/lib/socket";
 
-/* ================= STATUS (TOURNAMENT LOGIC) ================= */
+/* ================= STATUS LOGIC ================= */
 const getTournamentStatus = (startdate, enddate) => {
   if (!startdate || !enddate) return "upcoming";
 
@@ -39,9 +39,10 @@ export default function Page() {
       );
       if (!res.ok) throw new Error("Fetch failed");
 
-      setTournaments(await res.json());
+      const data = await res.json();
+      setTournaments(data);
       setError(null);
-    } catch {
+    } catch (err) {
       setError("❌ Failed to fetch tournaments");
     } finally {
       setLoading(false);
@@ -53,47 +54,41 @@ export default function Page() {
     fetchTournaments();
   }, [fetchTournaments]);
 
-  /* ================= SOCKET.IO ================= */
+  /* ================= SOCKET.IO REALTIME ================= */
   useEffect(() => {
     const handler = (data) => {
-      if (data.event === "TOURNAMENT_ADDED") {
+      // Refresh if admin adds tournament OR someone joins a match
+      if (data.event === "TOURNAMENT_ADDED" || data.event === "JOIN_MATCH") {
         fetchTournaments();
       }
     };
 
     socket.on("db-update", handler);
-    return () => socket.off("db-update", handler);
+
+    return () => {
+      socket.off("db-update", handler);
+    };
   }, [fetchTournaments]);
 
   return (
     <div className="min-h-screen bg-slate-50 space-y-6 px-4 py-6">
-
-      {/* HEADER (SCRIM STYLE) */}
+      {/* HEADER */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-extrabold text-cyan-600 flex items-center gap-2">
           <Swords className="w-7 h-7" />
           Tournaments
         </h1>
-        <span className="text-sm text-slate-500">
-          Compete • Win • Glory
-        </span>
+        <span className="text-sm text-slate-500">Compete • Win • Glory</span>
       </div>
 
-      {loading && (
-        <p className="text-center text-slate-500">Loading tournaments...</p>
-      )}
-
-      {error && (
-        <p className="text-center text-red-500">{error}</p>
-      )}
+      {loading && <p className="text-center text-slate-500">Loading tournaments...</p>}
+      {error && <p className="text-center text-red-500">{error}</p>}
 
       {!loading && !error && tournaments.length === 0 && (
-        <p className="text-center mt-20 text-slate-500">
-          📭 No tournaments available
-        </p>
+        <p className="text-center mt-20 text-slate-500">📭 No tournaments available</p>
       )}
 
-      {/* ===== SCRIM STYLE CARDS ===== */}
+      {/* TOURNAMENT CARDS */}
       {!loading && !error && tournaments.length > 0 && (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
           {tournaments.map((t, index) => {
@@ -101,12 +96,11 @@ export default function Page() {
 
             return (
               <div
-                key={index}
-                className="bg-white border rounded-2xl p-6 shadow-sm
-                           hover:shadow-md hover:border-cyan-400 transition-all"
+                key={t.tournamentId || index}
+                className="bg-white border rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-cyan-400 transition-all"
               >
                 <h2 className="text-xl font-bold mb-4">
-                  {(t.name || "UNKNOWN TOURNAMENT").toUpperCase()}
+                  {(t.name || "Tournament").toUpperCase()}
                 </h2>
 
                 <div className="text-sm text-slate-600 space-y-2">
@@ -114,10 +108,9 @@ export default function Page() {
                     <CalendarDays size={14} />
                     {t.startdate} – {t.enddate}
                   </div>
-
                   <div className="flex gap-2">
                     <Users size={14} />
-                    Slots: {t.slots || "Limited"}
+                    Slots: {t.slots || "Unlimited"}
                   </div>
                 </div>
 
@@ -142,9 +135,9 @@ export default function Page() {
 
                   <Link
                     href={`/detail/${t.tournamentId}`}
-                    className="text-cyan-600 text-sm font-semibold"
+                    className="text-cyan-600 text-sm font-semibold hover:underline"
                   >
-                    View
+                    View Details
                   </Link>
                 </div>
               </div>
