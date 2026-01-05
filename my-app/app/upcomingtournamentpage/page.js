@@ -15,20 +15,17 @@ const Page = () => {
   const [error, setError] = useState(null);
 
   /* ================= FETCH UPCOMING TOURNAMENTS ================= */
-  const fetchTournaments = useCallback(async () => {
+   const fetchTournaments = useCallback(async () => {
     try {
       const res = await fetch(
         "https://bgmibackend-1.onrender.com/upcomingtournament",
         { cache: "no-store" }
       );
-
       if (!res.ok) throw new Error("Fetch failed");
 
-      const data = await res.json();
-      setUpcomingTournaments(data);
+      setTournaments(await res.json());
       setError(null);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setError("❌ Failed to fetch tournaments");
     } finally {
       setLoading(false);
