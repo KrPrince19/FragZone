@@ -16,8 +16,9 @@ const Page = () => {
         "https://bgmibackendzm.onrender.com/winner",
         { cache: "no-store" }
       );
+
       if (!res.ok) throw new Error("Fetch failed");
-      
+
       const data = await res.json();
       setWinners(data);
       setError(null);
@@ -34,24 +35,21 @@ const Page = () => {
     fetchWinners();
   }, [fetchWinners]);
 
-  /* ================= SOCKET.IO LISTENER ================= */
-  // Integrated logic: Listens for tournament updates AND winner updates
+  /* ================= SOCKET.IO REALTIME (FIXED) ================= */
   useEffect(() => {
-    const handler = (data) => {
-      const shouldRefresh = 
-        data.event === "WINNER_UPDATED" ||
-        data.event === "RESULT_PUBLISHED" ||
-        data.event === "TOURNAMENT_ADDED"; // Added from Tournament page logic
+    if (!socket) return;
 
-      if (shouldRefresh) {
-        console.log(`Real-time refresh triggered by: ${data.event}`);
-        fetchWinners(); 
+    const handler = (data) => {
+      console.log("📡 Winner page socket:", data);
+
+      // ✅ ONLY EVENT THAT EXISTS FOR WINNERS
+      if (data?.event === "WINNER_UPDATED") {
+        fetchWinners(); // 🔥 realtime refresh
       }
     };
 
     socket.on("db-update", handler);
-    
-    // Cleanup listener on unmount to prevent memory leaks
+
     return () => {
       socket.off("db-update", handler);
     };
@@ -64,19 +62,19 @@ const Page = () => {
         🏆 Winners
       </h1>
 
-      {/* LOADING STATE */}
+      {/* LOADING */}
       {loading && (
         <p className="text-center text-slate-500 animate-pulse">
           Loading winners...
         </p>
       )}
 
-      {/* ERROR STATE */}
+      {/* ERROR */}
       {error && (
         <div className="text-center">
           <p className="text-red-500 font-medium">{error}</p>
-          <button 
-            onClick={() => fetchWinners()}
+          <button
+            onClick={fetchWinners}
             className="mt-4 text-cyan-600 underline text-sm"
           >
             Try Again
@@ -84,7 +82,7 @@ const Page = () => {
         </div>
       )}
 
-      {/* EMPTY STATE */}
+      {/* EMPTY */}
       {!loading && !error && winners.length === 0 && (
         <div className="text-center mt-20">
           <p className="text-xl font-semibold text-slate-600">
@@ -104,7 +102,7 @@ const Page = () => {
               key={index}
               className="bg-white border rounded-2xl p-4
                          flex items-center gap-5
-                         shadow-sm hover:shadow-md transition-all duration-300"
+                         shadow-sm hover:shadow-md transition-all"
             >
               {/* RANK */}
               <div className="text-3xl font-extrabold text-amber-500 w-10 text-center">
