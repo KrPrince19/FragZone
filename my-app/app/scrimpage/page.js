@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CalendarDays, Swords, Users } from "lucide-react";
 import { socket } from "@/lib/socket";
 
-/* ================= STATUS (TOURNAMENT LOGIC) ================= */
+/* ================= STATUS (SCRIM LOGIC) ================= */
 const getTournamentStatus = (startdate, enddate) => {
   if (!startdate || !enddate) return "upcoming";
 
@@ -26,23 +26,26 @@ const getTournamentStatus = (startdate, enddate) => {
 };
 
 export default function Page() {
-  const [Upcomingscrims, setUpcomigscrims] = useState([]);
+  const [upcomingScrims, setUpcomingScrims] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  /* ================= FETCH TOURNAMENTS ================= */
-  const fetchTournaments = useCallback(async () => {
+  /* ================= FETCH SCRIMS ================= */
+  const fetchScrims = useCallback(async () => {
     try {
       const res = await fetch(
         "https://bgmibackendzm.onrender.com/upcomingscrim",
         { cache: "no-store" }
       );
+
       if (!res.ok) throw new Error("Fetch failed");
 
-      setUpcomigscrims(await res.json());
+      const data = await res.json();
+      setUpcomingScrims(data);
       setError(null);
-    } catch {
-      setError("❌ Failed to fetch Upcomingscrims");
+    } catch (err) {
+      console.error(err);
+      setError("❌ Failed to fetch upcoming scrims");
     } finally {
       setLoading(false);
     }
@@ -50,29 +53,36 @@ export default function Page() {
 
   /* ================= INITIAL LOAD ================= */
   useEffect(() => {
-    fetchTournaments();
-  }, [fetchTournaments]);
+    fetchScrims();
+  }, [fetchScrims]);
 
-  /* ================= SOCKET.IO ================= */
+  /* ================= SOCKET.IO REALTIME (FIXED) ================= */
   useEffect(() => {
+    if (!socket) return;
+
     const handler = (data) => {
-      if (data.event === "TOURNAMENT_ADDED") {
-        fetchTournaments();
+      console.log("📡 Scrim page socket:", data);
+
+      if (data?.event === "UPCOMING_SCRIM_ADDED") {
+        fetchScrims(); // 🔥 realtime update
       }
     };
 
     socket.on("db-update", handler);
-    return () => socket.off("db-update", handler);
-  }, [fetchTournaments]);
+
+    return () => {
+      socket.off("db-update", handler);
+    };
+  }, [fetchScrims]);
 
   return (
     <div className="min-h-screen bg-slate-50 space-y-6 px-4 py-6">
 
-      {/* HEADER (SCRIM STYLE) */}
+      {/* HEADER */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-extrabold text-cyan-600 flex items-center gap-2">
           <Swords className="w-7 h-7" />
-          Tournaments
+          Upcoming Scrims
         </h1>
         <span className="text-sm text-slate-500">
           Compete • Win • Glory
@@ -80,23 +90,25 @@ export default function Page() {
       </div>
 
       {loading && (
-        <p className="text-center text-slate-500">Loading Upcomingscrims...</p>
+        <p className="text-center text-slate-500">
+          Loading upcoming scrims...
+        </p>
       )}
 
       {error && (
         <p className="text-center text-red-500">{error}</p>
       )}
 
-      {!loading && !error && Upcomingscrims.length === 0 && (
+      {!loading && !error && upcomingScrims.length === 0 && (
         <p className="text-center mt-20 text-slate-500">
-          📭 No Upcomingscrims available
+          📭 No upcoming scrims available
         </p>
       )}
 
-      {/* ===== SCRIM STYLE CARDS ===== */}
-      {!loading && !error && Upcomingscrims.length > 0 && (
+      {/* ===== SCRIM CARDS ===== */}
+      {!loading && !error && upcomingScrims.length > 0 && (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {Upcomingscrims.map((t, index) => {
+          {upcomingScrims.map((t, index) => {
             const status = getTournamentStatus(t.startdate, t.enddate);
 
             return (
@@ -106,7 +118,7 @@ export default function Page() {
                            hover:shadow-md hover:border-cyan-400 transition-all"
               >
                 <h2 className="text-xl font-bold mb-4">
-                  {(t.name || "UNKNOWN TOURNAMENT").toUpperCase()}
+                  {(t.name || "UNKNOWN SCRIM").toUpperCase()}
                 </h2>
 
                 <div className="text-sm text-slate-600 space-y-2">
@@ -142,7 +154,7 @@ export default function Page() {
 
                   <Link
                     href={`/detail/${t.tournamentId}`}
-                    className="text-cyan-600 text-sm font-semibold"
+                    className="text-cyan-600 text-sm font-semibold hover:underline"
                   >
                     View
                   </Link>
