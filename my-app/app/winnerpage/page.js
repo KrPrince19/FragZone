@@ -13,7 +13,7 @@ const Page = () => {
   const fetchWinners = useCallback(async () => {
     try {
       const res = await fetch(
-        "https://bgmibackend-1.onrender.com/winner",
+        "https://bgmibackendzm.onrender.com/winner",
         { cache: "no-store" }
       );
       if (!res.ok) throw new Error("Fetch failed");
