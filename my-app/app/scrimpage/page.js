@@ -34,7 +34,7 @@ export default function Page() {
   const fetchTournaments = useCallback(async () => {
     try {
       const res = await fetch(
-        "https://bgmibackend-1.onrender.com/upcomingscrim",
+        "https://bgmibackendzm.onrender.com/upcomingscrim",
         { cache: "no-store" }
       );
       if (!res.ok) throw new Error("Fetch failed");
