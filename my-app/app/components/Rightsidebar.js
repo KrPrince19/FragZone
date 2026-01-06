@@ -58,61 +58,53 @@ const LiveScrimSidebar = () => {
   }, [fetchScrims]);
 
   /* ================= SCRIM STATUS LOGIC ================= */
-  const getScrimStatus = (date, time) => {
-    if (!date || !time) return "upcoming";
+ const getScrimStatus = (date, time) => {
+  if (!date || !time) return "upcoming";
 
-    const now = new Date();
+  const now = new Date();
 
-    // Parse date
-    let [day, month, year] = date.includes("/")
-      ? date.split("/")
-      : date.split("-");
+  let year, month, day;
 
-    // Handle YYYY-MM-DD
-    if (day.length === 4) [year, month, day] = [day, month, year];
+  // ✅ DATE PARSE
+  if (date.includes("-")) {
+    // YYYY-MM-DD
+    [year, month, day] = date.split("-").map(Number);
+  } else {
+    // DD/MM/YYYY
+    [day, month, year] = date.split("/").map(Number);
+  }
 
-    // Parse time
-    let hours, minutes;
-    const timeClean = time.toLowerCase().trim();
+  // ✅ TIME PARSE
+  let hours, minutes;
+  const t = time.toLowerCase().trim();
 
-    if (timeClean.includes("am") || timeClean.includes("pm")) {
-      const period = timeClean.includes("pm") ? "pm" : "am";
-      const numeric = timeClean.replace(/am|pm/g, "").trim();
-      let [h, m] = numeric.split(":").map(Number);
+  if (t.includes("am") || t.includes("pm")) {
+    const isPM = t.includes("pm");
+    const [h, m] = t.replace(/am|pm/g, "").trim().split(":").map(Number);
 
-      if (period === "pm" && h < 12) h += 12;
-      if (period === "am" && h === 12) h = 0;
+    hours = isPM ? (h === 12 ? 12 : h + 12) : h === 12 ? 0 : h;
+    minutes = m;
+  } else {
+    [hours, minutes] = t.split(":").map(Number);
+  }
 
-      hours = h;
-      minutes = m;
-    } else {
-      [hours, minutes] = timeClean.split(":").map(Number);
-    }
+  const scrimTime = new Date(year, month - 1, day, hours, minutes);
+  const diff = (scrimTime - now) / 60000;
 
-    const scrimStart = new Date(
-      year,
-      month - 1,
-      day,
-      hours,
-      minutes,
-      0
-    );
+  if (diff <= 0 && diff >= -40) return "live";
+  if (diff > 0 && diff <= 30) return "soon";
 
-    const diffMinutes = (scrimStart - now) / 60000;
+  return "upcoming";
+};
 
-    if (diffMinutes <= 0 && diffMinutes >= -40) return "live";
-    if (diffMinutes > 0 && diffMinutes <= 30) return "soon";
-
-    return "upcoming";
-  };
 
   /* ================= FILTERS ================= */
   const liveScrims = scrims.filter(
-    (s) => getScrimStatus(s.date, s.time) === "live"
+    (s) => getScrimStatus(s.startdate, s.time) === "live"
   );
 
   const soonScrims = scrims.filter(
-    (s) => getScrimStatus(s.date, s.time) === "soon"
+    (s) => getScrimStatus(s.startdate, s.time) === "soon"
   );
 
   return (
