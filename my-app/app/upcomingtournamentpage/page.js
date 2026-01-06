@@ -25,7 +25,7 @@ export default function Page() {
       if (!res.ok) throw new Error("Fetch failed");
 
       const data = await res.json();
-      setUpcomingTournaments(data); // ✅ FIXED
+      setUpcomingTournaments(data);
       setError(null);
     } catch (err) {
       console.error(err);
@@ -63,19 +63,28 @@ export default function Page() {
     fetchJoined();
   }, [fetchJoined]);
 
-  /* ================= SOCKET.IO REALTIME ================= */
+  /* ================= SOCKET.IO REALTIME (ADDED) ================= */
   useEffect(() => {
-    const handler = (data) => {
-      if (data.event === "TOURNAMENT_ADDED") {
+    if (!socket) return;
+
+    const handleDBUpdate = (data) => {
+      console.log("📡 Socket event received:", data);
+
+      // 🔥 Same logic as Tournament page
+      if (data?.event === "TOURNAMENT_ADDED") {
         fetchTournaments();
       }
-      if (data.event === "JOIN_MATCH") {
+
+      if (data?.event === "JOIN_MATCH") {
         fetchJoined();
       }
     };
 
-    socket.on("db-update", handler);
-    return () => socket.off("db-update", handler);
+    socket.on("db-update", handleDBUpdate);
+
+    return () => {
+      socket.off("db-update", handleDBUpdate);
+    };
   }, [fetchTournaments, fetchJoined]);
 
   /* ================= JOIN CHECK ================= */
