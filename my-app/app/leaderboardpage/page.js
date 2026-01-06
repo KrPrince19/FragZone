@@ -14,7 +14,7 @@ const Page = () => {
   const fetchRanks = useCallback(async () => {
     try {
       const res = await fetch(
-        "https://bgmibackend-1.onrender.com/leaderboard",
+        "https://bgmibackendzm.onrender.com/leaderboard",
         { cache: "no-store" }
       );
       if (!res.ok) throw new Error("Failed to fetch leaderboard");
@@ -34,7 +34,7 @@ const Page = () => {
   const fetchTopPlayers = useCallback(async () => {
     try {
       const res = await fetch(
-        "https://bgmibackend-1.onrender.com/winner",
+        "https://bgmibackendzm.onrender.com/winner",
         { cache: "no-store" }
       );
       if (!res.ok) throw new Error("Failed to fetch top players");
