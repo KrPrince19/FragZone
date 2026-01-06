@@ -37,12 +37,14 @@ export default function Page() {
         "https://bgmibackendzm.onrender.com/tournament",
         { cache: "no-store" }
       );
+
       if (!res.ok) throw new Error("Fetch failed");
 
       const data = await res.json();
       setTournaments(data);
       setError(null);
     } catch (err) {
+      console.error(err);
       setError("❌ Failed to fetch tournaments");
     } finally {
       setLoading(false);
@@ -54,19 +56,25 @@ export default function Page() {
     fetchTournaments();
   }, [fetchTournaments]);
 
-  /* ================= SOCKET.IO REALTIME ================= */
+  /* ================= SOCKET.IO REALTIME (IMPLEMENTED) ================= */
   useEffect(() => {
-    const handler = (data) => {
-      // Refresh if admin adds tournament OR someone joins a match
-      if (data.event === "TOURNAMENT_ADDED" || data.event === "JOIN_MATCH") {
-        fetchTournaments();
+    if (!socket) return;
+
+    const handleDBUpdate = (data) => {
+      console.log("📡 Socket event received:", data);
+
+      if (
+        data?.event === "TOURNAMENT_ADDED" ||
+        data?.event === "JOIN_MATCH"
+      ) {
+        fetchTournaments(); // 🔥 realtime refresh
       }
     };
 
-    socket.on("db-update", handler);
+    socket.on("db-update", handleDBUpdate);
 
     return () => {
-      socket.off("db-update", handler);
+      socket.off("db-update", handleDBUpdate); // ✅ cleanup
     };
   }, [fetchTournaments]);
 
@@ -78,21 +86,35 @@ export default function Page() {
           <Swords className="w-7 h-7" />
           Tournaments
         </h1>
-        <span className="text-sm text-slate-500">Compete • Win • Glory</span>
+        <span className="text-sm text-slate-500">
+          Compete • Win • Glory
+        </span>
       </div>
 
-      {loading && <p className="text-center text-slate-500">Loading tournaments...</p>}
-      {error && <p className="text-center text-red-500">{error}</p>}
+      {loading && (
+        <p className="text-center text-slate-500">
+          Loading tournaments...
+        </p>
+      )}
+
+      {error && (
+        <p className="text-center text-red-500">{error}</p>
+      )}
 
       {!loading && !error && tournaments.length === 0 && (
-        <p className="text-center mt-20 text-slate-500">📭 No tournaments available</p>
+        <p className="text-center mt-20 text-slate-500">
+          📭 No tournaments available
+        </p>
       )}
 
       {/* TOURNAMENT CARDS */}
       {!loading && !error && tournaments.length > 0 && (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
           {tournaments.map((t, index) => {
-            const status = getTournamentStatus(t.startdate, t.enddate);
+            const status = getTournamentStatus(
+              t.startdate,
+              t.enddate
+            );
 
             return (
               <div
