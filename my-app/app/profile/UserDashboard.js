@@ -14,7 +14,7 @@ export default function UserDashboard({ userEmail, name }) {
   const fetchTournamentDetails = async () => {
     try {
       const res = await fetch(
-        "https://bgmibackend-1.onrender.com/joinmatches"
+        "https://bgmibackendzm.onrender.com/joinmatches"
       );
 
       if (!res.ok) throw new Error(`Server responded with ${res.status}`);
