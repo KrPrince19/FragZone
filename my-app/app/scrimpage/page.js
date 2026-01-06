@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CalendarDays, Swords, Users } from "lucide-react";
 import { socket } from "@/lib/socket";
 
-/* ================= STATUS (SCRIM LOGIC) ================= */
+/* ================= STATUS LOGIC ================= */
 const getTournamentStatus = (startdate, enddate) => {
   if (!startdate || !enddate) return "upcoming";
 
@@ -41,7 +41,7 @@ export default function Page() {
       if (!res.ok) throw new Error("Fetch failed");
 
       const data = await res.json();
-      setUpcomingScrims(data);
+      setUpcomingScrims(Array.isArray(data) ? data : []);
       setError(null);
     } catch (err) {
       console.error(err);
@@ -56,15 +56,19 @@ export default function Page() {
     fetchScrims();
   }, [fetchScrims]);
 
-  /* ================= SOCKET.IO REALTIME (FIXED) ================= */
+  /* ================= SOCKET.IO REALTIME (FIXED & GUARANTEED) ================= */
   useEffect(() => {
-    if (!socket) return;
+    // 🔥 Ensure socket is connected
+    if (!socket.connected) {
+      socket.connect();
+    }
 
     const handler = (data) => {
-      console.log("📡 Scrim page socket:", data);
+      console.log("📡 Scrim socket event received:", data);
 
+      // ✅ EXACT event from backend
       if (data?.event === "UPCOMING_SCRIM_ADDED") {
-        fetchScrims(); // 🔥 realtime update
+        fetchScrims();
       }
     };
 
@@ -77,7 +81,6 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-slate-50 space-y-6 px-4 py-6">
-
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-extrabold text-cyan-600 flex items-center gap-2">
@@ -105,7 +108,6 @@ export default function Page() {
         </p>
       )}
 
-      {/* ===== SCRIM CARDS ===== */}
       {!loading && !error && upcomingScrims.length > 0 && (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
           {upcomingScrims.map((t, index) => {
