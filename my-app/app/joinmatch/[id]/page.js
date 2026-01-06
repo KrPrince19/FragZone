@@ -7,7 +7,8 @@ const Page = () => {
   const params = useParams();
   const router = useRouter();
 
-  const tournamentName = params?.id?.toUpperCase() || "";
+  // Ensure tournamentName is extracted correctly from URL params
+  const tournamentName = params?.id?.toUpperCase() || "UNKNOWN TOURNAMENT";
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
@@ -56,18 +57,22 @@ const Page = () => {
     setLoading(true);
 
     try {
-    const res = await fetch(
-  "https://bgmibackendzm.onrender.com/joinmatches",
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ...form,
-      tournamentName,
-    }),
-  }
-);
-
+      // Logic: Your backend expects { collection: "joinmatches", data: [...] }
+      const res = await fetch("https://bgmibackendzm.onrender.com/tournament", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json" 
+        },
+        body: JSON.stringify({
+          collection: "joinmatches",
+          data: [{ 
+            ...form, 
+            tournamentName, 
+            joinedAt: new Date() 
+          }], // Backend expects an array for insertMany
+        }),
+      });
 
       const data = await res.json();
 
@@ -83,7 +88,8 @@ const Page = () => {
       setTimeout(() => {
         router.push("/profile");
       }, 2000);
-    } catch {
+    } catch (err) {
+      console.error("Fetch Error:", err);
       setError("❌ Failed to connect to server");
       setLoading(false);
     }
@@ -138,7 +144,6 @@ const Page = () => {
   );
 };
 
-/* ---------------- INPUT COMPONENT ---------------- */
 const Input = ({ label, value, ...props }) => (
   <div className="mb-4">
     <label className="block text-sm font-semibold text-slate-600 mb-1">
