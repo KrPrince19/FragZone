@@ -42,40 +42,39 @@ const LiveScrimSidebar = () => {
     return () => socket.off("db-update", handler);
   }, [fetchScrims]);
 
-  /* ================= GUARANTEED STATUS LOGIC ================= */
-  const getScrimStatus = (startdate, time) => {
-    if (!startdate || !time) return "upcoming";
+  /* ================= SIMPLE & SAFE STATUS LOGIC ================= */
+  const getScrimStatus = (time) => {
+    if (!time) return "upcoming";
 
-    const cleanTime = time
-      .toUpperCase()
-      .replace(" AM", "")
-      .replace(" PM", "");
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
 
-    let [hours, minutes] = cleanTime.split(":").map(Number);
+    let [clock, period] = time.trim().split(" ");
+    let [hours, minutes] = clock.split(":").map(Number);
 
-    if (time.toUpperCase().includes("PM") && hours < 12) hours += 12;
-    if (time.toUpperCase().includes("AM") && hours === 12) hours = 0;
+    if (period === "PM" && hours < 12) hours += 12;
+    if (period === "AM" && hours === 12) hours = 0;
 
-    const scrimDateTime = new Date(
-      `${startdate}T${hours.toString().padStart(2, "0")}:${minutes
+    const scrimTime = new Date(
+      `${today}T${hours.toString().padStart(2, "0")}:${minutes
         .toString()
         .padStart(2, "0")}:00`
     );
 
-    const now = new Date();
-    const diff = (scrimDateTime - now) / 60000;
+    const diff = (scrimTime - now) / 60000;
 
     if (diff <= 0 && diff >= -40) return "live";
     if (diff > 0 && diff <= 30) return "soon";
+
     return "upcoming";
   };
 
   const liveScrims = scrims.filter(
-    (s) => getScrimStatus(s.startdate, s.time) === "live"
+    (s) => getScrimStatus(s.time) === "live"
   );
 
   const soonScrims = scrims.filter(
-    (s) => getScrimStatus(s.startdate, s.time) === "soon"
+    (s) => getScrimStatus(s.time) === "soon"
   );
 
   return (
@@ -87,7 +86,7 @@ const LiveScrimSidebar = () => {
           Live Scrims
         </h2>
 
-        {/* LIVE */}
+        {/* 🔴 LIVE */}
         {liveScrims.length > 0 && (
           <div>
             <h3 className="text-sm font-bold text-red-600 mb-2">🔴 LIVE NOW</h3>
@@ -100,7 +99,7 @@ const LiveScrimSidebar = () => {
           </div>
         )}
 
-        {/* SOON */}
+        {/* ⏱ SOON */}
         {soonScrims.length > 0 && (
           <div>
             <h3 className="text-sm font-bold text-amber-600 mb-2">
