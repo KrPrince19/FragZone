@@ -10,7 +10,7 @@ const LiveScrimSidebar = () => {
 
   const fetchScrims = useCallback(async () => {
     try {
-      const res = await fetch("https://bgmibackend-1.onrender.com/upcomingscrim", { 
+      const res = await fetch("https://bgmibackendzm.onrender.com/upcomingscrim", { 
         cache: "no-store" 
       });
       const data = await res.json();
