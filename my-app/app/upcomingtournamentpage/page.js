@@ -18,7 +18,7 @@ const Page = () => {
    const fetchTournaments = useCallback(async () => {
     try {
       const res = await fetch(
-        "https://bgmibackend-1.onrender.com/upcomingtournament",
+        "https://bgmibackendzm.onrender.com/upcomingtournament",
         { cache: "no-store" }
       );
       if (!res.ok) throw new Error("Fetch failed");
@@ -38,7 +38,7 @@ const Page = () => {
 
     try {
       const res = await fetch(
-        "https://bgmibackend-1.onrender.com/joinmatches",
+        "https://bgmibackendzm.onrender.com/joinmatches",
         { cache: "no-store" }
       );
 
