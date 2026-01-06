@@ -15,11 +15,13 @@ const LiveScrimSidebar = () => {
         "https://bgmibackend-1.onrender.com/upcomingscrim",
         { cache: "no-store" }
       );
-      const data = await res.json();
 
-      setScrims(Array.isArray(data) ? data : data.data || []);
+      if (!res.ok) throw new Error("Fetch failed");
+
+      const data = await res.json();
+      setScrims(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("Failed to fetch scrims", err);
+      console.error("❌ Failed to fetch scrims:", err);
       setScrims([]);
     } finally {
       setLoading(false);
@@ -31,70 +33,78 @@ const LiveScrimSidebar = () => {
     fetchScrims();
   }, [fetchScrims]);
 
-  /* ================= SOCKET.IO LISTENER (SYNCED) ================= */
+  /* ================= SOCKET.IO REALTIME (FIXED) ================= */
   useEffect(() => {
-    const handler = (data) => {
-      // Listens for specific Scrim events + broader tournament events
-      const shouldRefresh = 
-        data.event === "SCRIM_ADDED" ||
-        data.event === "SCRIM_UPDATED" ||
-        data.event === "SCRIM_DELETED" ||
-        data.event === "TOURNAMENT_ADDED" ||   // Logic from tournament page
-        data.event === "RESULT_PUBLISHED";     // Logic from winner page
+    if (!socket) return;
 
-      if (shouldRefresh) {
-        console.log("Real-time Scrim Sidebar update:", data.event);
-        fetchScrims(); 
+    const handleDBUpdate = (data) => {
+      console.log("📡 Scrim socket event:", data);
+
+      // ✅ EVENTS THAT ACTUALLY EXIST IN YOUR BACKEND
+      if (
+        data?.event === "UPCOMING_SCRIM_ADDED" ||
+        data?.event === "TOURNAMENT_ADDED" ||
+        data?.event === "WINNER_UPDATED"
+      ) {
+        fetchScrims(); // 🔥 real-time refresh
       }
     };
 
-    socket.on("db-update", handler);
+    socket.on("db-update", handleDBUpdate);
 
     return () => {
-      socket.off("db-update", handler);
+      socket.off("db-update", handleDBUpdate);
     };
   }, [fetchScrims]);
 
   /* ================= SCRIM STATUS LOGIC ================= */
- const getScrimStatus = (date, time) => {
-  if (!date || !time) return "upcoming";
+  const getScrimStatus = (date, time) => {
+    if (!date || !time) return "upcoming";
 
-  const now = new Date();
+    const now = new Date();
 
-  /* 1. PARSE DATE */
-  let [day, month, year] = date.includes("/") ? date.split("/") : date.split("-");
-  // Handle YYYY-MM-DD
-  if (day.length === 4) [year, month, day] = [day, month, year];
+    // Parse date
+    let [day, month, year] = date.includes("/")
+      ? date.split("/")
+      : date.split("-");
 
-  /* 2. PARSE TIME */
-  let hours, minutes;
-  const timeClean = time.toLowerCase().trim();
+    // Handle YYYY-MM-DD
+    if (day.length === 4) [year, month, day] = [day, month, year];
 
-  if (timeClean.includes("am") || timeClean.includes("pm")) {
-    // 12-hour logic (e.g., "11:00 pm")
-    const period = timeClean.includes("pm") ? "pm" : "am";
-    const numericPart = timeClean.replace(/am|pm/g, "").trim();
-    let [h, m] = numericPart.split(":").map(Number);
+    // Parse time
+    let hours, minutes;
+    const timeClean = time.toLowerCase().trim();
 
-    if (period === "pm" && h < 12) h += 12;
-    if (period === "am" && h === 12) h = 0;
-    hours = h;
-    minutes = m;
-  } else {
-    // 24-hour logic (e.g., "23:00")
-    [hours, minutes] = timeClean.split(":").map(Number);
-  }
+    if (timeClean.includes("am") || timeClean.includes("pm")) {
+      const period = timeClean.includes("pm") ? "pm" : "am";
+      const numeric = timeClean.replace(/am|pm/g, "").trim();
+      let [h, m] = numeric.split(":").map(Number);
 
-  const scrimStart = new Date(year, month - 1, day, hours, minutes, 0);
-  const diffMinutes = (scrimStart - now) / 60000;
+      if (period === "pm" && h < 12) h += 12;
+      if (period === "am" && h === 12) h = 0;
 
-  // Debugging: console.log(scrimStart, diffMinutes); 
+      hours = h;
+      minutes = m;
+    } else {
+      [hours, minutes] = timeClean.split(":").map(Number);
+    }
 
-  if (diffMinutes <= 0 && diffMinutes >= -40) return "live";
-  if (diffMinutes > 0 && diffMinutes <= 30) return "soon";
+    const scrimStart = new Date(
+      year,
+      month - 1,
+      day,
+      hours,
+      minutes,
+      0
+    );
 
-  return "upcoming";
-};
+    const diffMinutes = (scrimStart - now) / 60000;
+
+    if (diffMinutes <= 0 && diffMinutes >= -40) return "live";
+    if (diffMinutes > 0 && diffMinutes <= 30) return "soon";
+
+    return "upcoming";
+  };
 
   /* ================= FILTERS ================= */
   const liveScrims = scrims.filter(
@@ -115,6 +125,7 @@ const LiveScrimSidebar = () => {
           Live Scrims
         </h2>
 
+        {/* LOADING */}
         {loading && (
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <div className="w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
@@ -122,7 +133,7 @@ const LiveScrimSidebar = () => {
           </div>
         )}
 
-        {/* 🔴 LIVE SECTION */}
+        {/* 🔴 LIVE SCRIMS */}
         {liveScrims.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold text-red-600 mb-2 flex items-center gap-1">
@@ -136,16 +147,16 @@ const LiveScrimSidebar = () => {
             {liveScrims.map((scrim, idx) => (
               <div
                 key={idx}
-                className="border border-red-200 rounded-xl p-3 mb-2 bg-red-50 hover:shadow-md transition-shadow"
+                className="border border-red-200 rounded-xl p-3 mb-2 bg-red-50 hover:shadow-md transition"
               >
                 <p className="font-bold text-slate-800 text-sm">
                   {scrim.name}
                 </p>
                 <p className="text-[10px] uppercase tracking-wider text-slate-600 mt-1">
-                   Map: {scrim.map || "TBA"}
+                  Map: {scrim.map || "TBA"}
                 </p>
 
-                <button className="mt-2 w-full text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg py-1.5 transition-colors">
+                <button className="mt-2 w-full text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg py-1.5">
                   Join Scrim
                 </button>
               </div>
@@ -153,7 +164,7 @@ const LiveScrimSidebar = () => {
           </div>
         )}
 
-        {/* ⏱ STARTING SOON SECTION */}
+        {/* ⏱ STARTING SOON */}
         {soonScrims.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold text-amber-600 mb-2">
@@ -180,8 +191,10 @@ const LiveScrimSidebar = () => {
         {/* EMPTY STATE */}
         {!loading && liveScrims.length === 0 && soonScrims.length === 0 && (
           <div className="text-center py-4">
-             <p className="text-sm text-slate-400">No active scrims</p>
-             <p className="text-[10px] text-slate-300 mt-1">Check back later</p>
+            <p className="text-sm text-slate-400">No active scrims</p>
+            <p className="text-[10px] text-slate-300 mt-1">
+              Check back later
+            </p>
           </div>
         )}
       </div>
