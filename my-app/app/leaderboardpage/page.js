@@ -3,12 +3,14 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { socket } from "@/lib/socket";
 import Image from "next/image";
+import { Trophy, Wifi, WifiOff, Flame } from "lucide-react";
 
 const Page = () => {
   const [rankData, setRankData] = useState([]);
   const [topPlayers, setTopPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isConnected, setIsConnected] = useState(socket.connected);
 
   /* ================= FETCH LEADERBOARD ================= */
   const fetchRanks = useCallback(async () => {
@@ -31,7 +33,7 @@ const Page = () => {
     }
   }, []);
 
-  /* ================= FETCH TOP PLAYERS ================= */
+  /* ================= FETCH TOP PLAYERS (WINNERS) ================= */
   const fetchTopPlayers = useCallback(async () => {
     try {
       const res = await fetch(
@@ -48,50 +50,63 @@ const Page = () => {
     }
   }, []);
 
-  /* ================= INITIAL LOAD ================= */
+  /* ================= SOCKET.IO REALTIME ================= */
   useEffect(() => {
+    // Initial data fetch
     fetchRanks();
     fetchTopPlayers();
-  }, [fetchRanks, fetchTopPlayers]);
 
-  /* ================= SOCKET.IO REALTIME (FIXED) ================= */
-  useEffect(() => {
-    if (!socket) return;
+    const onConnect = () => setIsConnected(true);
+    const onDisconnect = () => setIsConnected(false);
 
     const handler = (data) => {
-      console.log("📡 Leaderboard socket:", data);
+      console.log("📡 Leaderboard socket update:", data.event);
 
-      // ✅ Leaderboard updates
-      if (data?.event === "LEADERBOARD_UPDATED") {
+      // ✅ Match backend: leaderboard -> "LEADERBOARD_ADDED"
+      if (data?.event === "LEADERBOARD_ADDED") {
         fetchRanks();
       }
 
-      // ✅ MVP / Top Players updates
-      if (data?.event === "WINNER_UPDATED") {
+      // ✅ Match backend: winner -> "WINNER"
+      if (data?.event === "WINNER") {
         fetchTopPlayers();
       }
     };
 
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
     socket.on("db-update", handler);
 
     return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
       socket.off("db-update", handler);
     };
   }, [fetchRanks, fetchTopPlayers]);
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-6 lg:px-10">
-      {/* TITLE */}
-      <h1 className="text-3xl md:text-4xl font-extrabold text-center text-slate-800 mb-8">
-        🏆 Leaderboard
-      </h1>
+      
+      {/* HEADER WITH SYNC STATUS */}
+      <div className="flex items-center justify-between max-w-6xl mx-auto mb-8">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-slate-800 flex items-center gap-2">
+          <Trophy className="text-amber-500 w-8 h-8" /> Leaderboard
+        </h1>
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white border text-[10px] font-bold shadow-sm">
+          {isConnected ? (
+            <><Wifi size={12} className="text-green-500" /> LIVE SYNC</> 
+          ) : (
+            <><WifiOff size={12} className="text-red-500" /> SYNCING...</>
+          )}
+        </div>
+      </div>
 
-      {/* ================= TOP PLAYERS ================= */}
+      {/* ================= TOP PLAYERS (MVP) ================= */}
       {!loading && !error && topPlayers.length > 0 && (
         <div className="mb-12">
           <div className="flex justify-center mb-8">
             <div className="flex items-center gap-2 bg-red-500 text-white px-6 py-2 rounded-full font-bold shadow-md animate-pulse">
-              🔥 Most Kill Players
+              <Flame size={18} /> Most Kill Players
             </div>
           </div>
 
@@ -103,7 +118,7 @@ const Page = () => {
               >
                 <div className="relative w-32 h-32 mx-auto">
                   <Image
-                    src={`/mvpimage/${player.imgSrc}`}
+                    src={`/mvpimage/${player.imgSrc || "default.png"}`}
                     alt={player.name || "Player"}
                     fill
                     className="rounded-full object-cover border-4 border-cyan-400"
@@ -129,7 +144,7 @@ const Page = () => {
 
       {/* ================= LEADERBOARD TABLE ================= */}
       <div className="max-w-4xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="grid grid-cols-5 bg-slate-100 px-4 py-4 font-bold text-slate-600">
+        <div className="grid grid-cols-5 bg-slate-100 px-4 py-4 font-bold text-slate-600 text-sm md:text-base">
           <div>Rank</div>
           <div>Player</div>
           <div>Team</div>
@@ -145,39 +160,26 @@ const Page = () => {
         ) : error ? (
           <div className="text-center py-10">
             <p className="text-red-500 font-medium">{error}</p>
-            <button
-              onClick={fetchRanks}
-              className="mt-2 text-cyan-600 underline"
-            >
-              Retry
-            </button>
+            <button onClick={fetchRanks} className="mt-2 text-cyan-600 underline">Retry</button>
           </div>
         ) : rankData.length === 0 ? (
-          <p className="text-center py-10 text-slate-500">
-            📭 Leaderboard data not available yet
-          </p>
+          <p className="text-center py-10 text-slate-500">📭 Leaderboard data not available yet</p>
         ) : (
           <div className="divide-y divide-slate-100">
             {rankData.map((playerRank, idx) => (
               <div
                 key={idx}
-                className="grid grid-cols-5 px-4 py-4 hover:bg-slate-50 transition items-center"
+                className="grid grid-cols-5 px-4 py-4 hover:bg-slate-50 transition items-center text-xs md:text-sm"
               >
-                <div className="font-bold text-amber-600">
-                  #{playerRank.rank ?? idx + 1}
-                </div>
+                <div className="font-bold text-amber-600">#{playerRank.rank ?? idx + 1}</div>
                 <div className="font-semibold text-slate-800 truncate">
                   {playerRank.playerName?.toUpperCase() || "UNKNOWN"}
                 </div>
                 <div className="font-semibold text-slate-500 truncate">
                   {playerRank.teamName?.toUpperCase() || "UNKNOWN"}
                 </div>
-                <div className="font-bold text-emerald-600">
-                  {playerRank.kill ?? 0}
-                </div>
-                <div className="font-bold text-blue-600">
-                  {playerRank.point ?? 0}
-                </div>
+                <div className="font-bold text-emerald-600">{playerRank.kill ?? 0}</div>
+                <div className="font-bold text-blue-600">{playerRank.point ?? 0}</div>
               </div>
             ))}
           </div>
