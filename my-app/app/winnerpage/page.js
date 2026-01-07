@@ -3,11 +3,13 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { socket } from "@/lib/socket";
 import Image from "next/image";
+import { Trophy, Wifi, WifiOff } from "lucide-react"; // Matching style
 
 const Page = () => {
   const [winners, setWinners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isConnected, setIsConnected] = useState(socket.connected);
 
   /* ================= FETCH WINNERS ================= */
   const fetchWinners = useCallback(async () => {
@@ -30,37 +32,48 @@ const Page = () => {
     }
   }, []);
 
-  /* ================= INITIAL LOAD ================= */
+  /* ================= SOCKET.IO REALTIME ================= */
   useEffect(() => {
     fetchWinners();
-  }, [fetchWinners]);
 
-  /* ================= SOCKET.IO REALTIME (FIXED) ================= */
-  useEffect(() => {
-    if (!socket) return;
+    const onConnect = () => setIsConnected(true);
+    const onDisconnect = () => setIsConnected(false);
 
-    const handler = (data) => {
-      console.log("📡 Winner page socket:", data);
-
-      // ✅ ONLY EVENT THAT EXISTS FOR WINNERS
-      if (data?.event === "WINNER_UPDATED") {
-        fetchWinners(); // 🔥 realtime refresh
+    const handleUpdate = (data) => {
+      console.log("📡 Winner Socket Event:", data.event);
+      // Matching the "WINNER" event emitted by your backend
+      if (data?.event === "WINNER") {
+        fetchWinners(); 
       }
     };
 
-    socket.on("db-update", handler);
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("db-update", handleUpdate);
 
     return () => {
-      socket.off("db-update", handler);
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("db-update", handleUpdate);
     };
   }, [fetchWinners]);
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-6 lg:px-10">
-      {/* TITLE */}
-      <h1 className="text-3xl md:text-4xl font-extrabold text-center text-slate-800 mb-8">
-        🏆 Winners
-      </h1>
+      
+      {/* HEADER WITH SYNC STATUS */}
+      <div className="flex items-center justify-between max-w-3xl mx-auto mb-8">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-slate-800 flex items-center gap-2">
+          <Trophy className="text-amber-500 w-8 h-8" /> Winners
+        </h1>
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white border text-[10px] font-bold shadow-sm">
+          {isConnected ? (
+            <><Wifi size={12} className="text-green-500" /> LIVE SYNC</> 
+          ) : (
+            <><WifiOff size={12} className="text-red-500" /> SYNCING...</>
+          )}
+        </div>
+      </div>
 
       {/* LOADING */}
       {loading && (
@@ -112,7 +125,7 @@ const Page = () => {
               {/* IMAGE */}
               <div className="relative w-16 h-16">
                 <Image
-                  src={`/mvpimage/${player.imgSrc}`}
+                  src={`/mvpimage/${player.imgSrc || "default.png"}`}
                   alt={player.name || "Player"}
                   fill
                   className="rounded-full object-cover border-2 border-cyan-400"
