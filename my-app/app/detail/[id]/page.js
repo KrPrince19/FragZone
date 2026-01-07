@@ -11,10 +11,10 @@ export default function DetailPage() {
   const [error, setError] = useState(null);
 
   const fetchTournamentDetails = useCallback(async () => {
-    // Ensure params.id exists (e.g., "deadzone")
     if (!params.id) return;
 
     try {
+      setLoading(true);
       const res = await fetch(
         `https://bgmibackendzm.onrender.com/tournamentdetail/${params.id}`,
         { cache: "no-store" }
@@ -22,12 +22,22 @@ export default function DetailPage() {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || "Failed to fetch");
+        throw new Error(errData.error || "Failed to fetch from server");
       }
 
       const data = await res.json();
-      setTournament(data);
-      setError(null);
+
+      // --- VALIDATION LOGIC ---
+      // Check if the ID in the URL matches the ID returned from the database column
+      if (data && data.tournamentId === params.id) {
+        setTournament(data);
+        setError(null);
+      } else {
+        // This triggers if the API returns a different record or an empty object
+        setTournament(null);
+        setError("Tournament detail not found (ID Mismatch)");
+      }
+      
     } catch (err) {
       console.error("Fetch error:", err);
       setError(err.message);
@@ -40,7 +50,6 @@ export default function DetailPage() {
     fetchTournamentDetails();
   }, [fetchTournamentDetails]);
 
-  // Socket listener remains the same
   useEffect(() => {
     const handler = (data) => {
       if (data.event === "TOURNAMENT_ADDED") {
@@ -52,15 +61,23 @@ export default function DetailPage() {
   }, [fetchTournamentDetails]);
 
   if (loading) return <div className="text-center mt-20 animate-pulse">Loading {params.id}...</div>;
-  if (error) return <div className="text-center mt-20 text-red-500 font-bold">Error: {error}</div>;
+  
+  // Display specialized error UI if not found or ID mismatch
+  if (error || !tournament) {
+    return (
+      <div className="text-center mt-20">
+        <h2 className="text-2xl font-bold text-red-500">Detail Not Found</h2>
+        <p className="text-slate-500 mt-2">{error || "The requested tournament does not exist."}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 flex justify-center">
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-lg p-8">
         
-        {/* Verification Check */}
         <div className="mb-4 text-xs font-mono text-slate-400">
-          Viewing Record: {tournament.tournamentId}
+          Verified Record: {tournament.tournamentId}
         </div>
 
         <h1 className="text-3xl font-extrabold text-cyan-600 mb-6 uppercase">
