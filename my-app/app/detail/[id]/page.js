@@ -15,7 +15,7 @@ export default function DetailPage() {
   const fetchTournamentDetails = useCallback(async () => {
     try {
       const res = await fetch(
-        "https://bgmibackend-1.onrender.com/tournamentdetail",
+         "https://bgmibackendzm.onrender.com/leaderboard",
         { cache: "no-store" }
       );
 
