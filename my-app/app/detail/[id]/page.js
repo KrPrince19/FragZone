@@ -6,98 +6,110 @@ import { socket } from "../../../lib/socket";
 
 export default function DetailPage() {
   const params = useParams();
-  const [tournament, setTournament] = useState(null);
+
+  const [tournamentDetail, setTournamentDetail] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  /* ================= FETCH TOURNAMENT DETAILS ================= */
   const fetchTournamentDetails = useCallback(async () => {
-    if (!params.id) return;
-
     try {
-      setLoading(true);
       const res = await fetch(
-        `https://bgmibackendzm.onrender.com/tournamentdetail/${params.id}`,
+        "https://bgmibackend-1.onrender.com/tournamentdetail",
         { cache: "no-store" }
       );
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Failed to fetch from server");
-      }
+      if (!res.ok) throw new Error(`Server responded with ${res.status}`);
 
       const data = await res.json();
-
-      // --- VALIDATION LOGIC ---
-      // Check if the ID in the URL matches the ID returned from the database column
-      if (data && data.tournamentId === params.id) {
-        setTournament(data);
-        setError(null);
-      } else {
-        // This triggers if the API returns a different record or an empty object
-        setTournament(null);
-        setError("Tournament detail not found (ID Mismatch)");
-      }
-      
+      setTournamentDetail(data);
+      setError(null);
     } catch (err) {
-      console.error("Fetch error:", err);
-      setError(err.message);
+      console.error(err);
+      setError("Failed to fetch tournament data.");
     } finally {
       setLoading(false);
     }
-  }, [params.id]);
+  }, []);
 
+  /* ================= INITIAL LOAD ================= */
   useEffect(() => {
     fetchTournamentDetails();
   }, [fetchTournamentDetails]);
 
+  /* ================= SOCKET.IO LISTENER ================= */
   useEffect(() => {
     const handler = (data) => {
-      if (data.event === "TOURNAMENT_ADDED") {
-        fetchTournamentDetails(); 
+      if (data.event === "TOURNAMENT_DETAIL_UPDATED") {
+        fetchTournamentDetails(); // 🔥 realtime update
       }
     };
+
     socket.on("db-update", handler);
-    return () => socket.off("db-update", handler);
+
+    return () => {
+      socket.off("db-update", handler);
+    };
   }, [fetchTournamentDetails]);
 
-  if (loading) return <div className="text-center mt-20 animate-pulse">Loading {params.id}...</div>;
-  
-  // Display specialized error UI if not found or ID mismatch
-  if (error || !tournament) {
+  const tournament = tournamentDetail.find(
+    (t) =>
+      String(t.tournamentId).trim() === String(params.id).trim()
+  );
+
+  if (loading) {
     return (
-      <div className="text-center mt-20">
-        <h2 className="text-2xl font-bold text-red-500">Detail Not Found</h2>
-        <p className="text-slate-500 mt-2">{error || "The requested tournament does not exist."}</p>
-      </div>
+      <p className="text-center mt-12 text-gray-500 text-lg">
+        Loading tournament details...
+      </p>
+    );
+  }
+
+  if (error) {
+    return (
+      <p className="text-center mt-12 text-red-500 text-lg">
+        {error}
+      </p>
+    );
+  }
+
+  if (!tournament) {
+    return (
+      <p className="text-center mt-12 text-red-500 text-lg">
+        Tournament not found.
+      </p>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 flex justify-center">
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-lg p-8">
+    <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-12 flex justify-center">
+      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-lg p-6 md:p-8 lg:p-10">
         
-        <div className="mb-4 text-xs font-mono text-slate-400">
-          Verified Record: {tournament.tournamentId}
-        </div>
-
-        <h1 className="text-3xl font-extrabold text-cyan-600 mb-6 uppercase">
-          {tournament.name || "Unnamed Tournament"}
+        {/* TITLE */}
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-center text-cyan-500 mb-8">
+          {(tournament.name || "UNKNOWN TOURNAMENT").toUpperCase()}
         </h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <DetailItem label="Map" value={tournament.map} />
-          <DetailItem label="Prize Pool" value={tournament.prizePool} />
+        {/* DETAILS GRID */}
+        <div className="grid sm:grid-cols-2 gap-6 text-slate-700">
           <DetailItem label="Start Date" value={tournament.startdate} />
           <DetailItem label="End Date" value={tournament.enddate} />
+          <DetailItem label="Map" value={tournament.map || "TBA"} />
+          <DetailItem label="Prize Pool" value={tournament.prizePool || "TBA"} />
         </div>
       </div>
     </div>
   );
 }
 
+/* ---------- SMALL REUSABLE COMPONENT ---------- */
 const DetailItem = ({ label, value }) => (
-  <div className="p-4 bg-slate-100 rounded-lg border border-slate-200">
-    <p className="text-sm text-slate-500 font-semibold uppercase">{label}</p>
-    <p className="text-lg font-bold text-slate-800">{value || "TBA"}</p>
+  <div className="bg-slate-100 rounded-xl p-4 flex flex-col">
+    <span className="text-sm font-semibold text-slate-500">
+      {label}
+    </span>
+    <span className="text-lg font-bold text-slate-800 mt-1">
+      {value}
+    </span>
   </div>
 );
