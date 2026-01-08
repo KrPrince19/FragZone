@@ -147,7 +147,7 @@ export default function Page() {
                   </div>
                   
                   <Link 
-                    href={`/detail/${t.tournamentId}`} 
+                      href={`/detail/${t.tournamentId}`}
                     className="text-cyan-600 text-sm font-bold hover:text-cyan-700 hover:underline flex items-center gap-1"
                   >
                     View Details →
