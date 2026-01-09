@@ -132,8 +132,9 @@ export default function Page() {
                   <div className="flex gap-2">
                    <History size={12}/> 
                     Time: {t.time} 
-                    Map : {t.map}
+                   
                   </div>
+                    <p> Map : {t.map}</p>
                 </div>
 
                 <div className="mt-4 flex items-center justify-between">
