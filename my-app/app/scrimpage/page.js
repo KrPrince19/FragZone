@@ -134,7 +134,7 @@ export default function Page() {
                     Time: {t.time} 
                    
                   </div>
-                    <p> Map : {t.map}</p>
+                    <p> Map : {t.map.toUpperCase()}</p>
                 </div>
 
                 <div className="mt-4 flex items-center justify-between">
