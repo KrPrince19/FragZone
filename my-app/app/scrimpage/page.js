@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { CalendarDays, Swords, Users } from "lucide-react";
+import { CalendarDays, Swords, Users,History } from "lucide-react";
 import { socket } from "@/lib/socket";
 
 /* ================= STATUS LOGIC ================= */
