@@ -26,20 +26,19 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(socket.connected);
 
-  /* ================= FETCH DATA FROM BOTH COLLECTIONS ================= */
+  /* ================= FETCH DATA  COLLECTIONS ================= */
   const fetchAllData = useCallback(async () => {
     try {
       // Fetching from both tournament and passedmatch
-      const [res1, res2] = await Promise.all([
+      const [res1] = await Promise.all([
         fetch("https://bgmibackendzm.onrender.com/tournament", { cache: "no-store" }),
-        fetch("https://bgmibackendzm.onrender.com/passedmatch", { cache: "no-store" })
+       
       ]);
 
       const data1 = res1.ok ? await res1.json() : [];
-      const data2 = res2.ok ? await res2.json() : [];
 
       // Combine and remove duplicates based on tournamentId if necessary
-      setTournaments([...data1, ...data2]);
+      setTournaments([...data1);
     } catch (err) {
       console.error("Fetch error:", err);
     } finally {
@@ -111,7 +110,7 @@ export default function Page() {
 
             return (
               <div 
-                key={t.tournamentId || i} 
+                key={t.tournamentId} 
                 className={`group bg-white border rounded-2xl p-6 shadow-sm transition-all duration-300 ${
                     status === 'passed' ? 'opacity-80 grayscale-[0.3]' : 'hover:border-cyan-400 hover:shadow-md'
                 }`}
