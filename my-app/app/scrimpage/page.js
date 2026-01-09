@@ -154,12 +154,7 @@ export default function Page() {
                     )}
                   </div>
 
-                  <Link
-                    href={`/detail/${t.tournamentId}`}
-                    className="text-cyan-600 text-sm font-semibold hover:underline"
-                  >
-                    View
-                  </Link>
+                  
                 </div>
               </div>
             );
