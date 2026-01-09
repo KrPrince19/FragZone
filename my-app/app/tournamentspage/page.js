@@ -2,14 +2,13 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { CalendarDays, Swords, Users, Wifi, WifiOff } from "lucide-react";
+import { CalendarDays, Swords, Users, Wifi, WifiOff, History } from "lucide-react";
 import { socket } from "@/lib/socket";
 
 const getTournamentStatus = (startdate, enddate) => {
   if (!startdate || !enddate) return "upcoming";
   const parse = (d) => {
     const p = d.includes("/") ? d.split("/") : d.split("-");
-    // Handle YYYY-MM-DD or DD-MM-YYYY
     return p[0].length === 4
       ? new Date(p[0], p[1] - 1, p[2])
       : new Date(p[2], p[1] - 1, p[0]);
@@ -27,15 +26,20 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(socket.connected);
 
-  /* ================= FETCH DATA ================= */
-  const fetchTournaments = useCallback(async () => {
+  /* ================= FETCH DATA FROM BOTH COLLECTIONS ================= */
+  const fetchAllData = useCallback(async () => {
     try {
-      const res = await fetch("https://bgmibackendzm.onrender.com/tournament", { 
-        cache: "no-store" 
-      });
-      if (!res.ok) throw new Error("Fetch failed");
-      const data = await res.json();
-      setTournaments(data);
+      // Fetching from both tournament and passedmatch
+      const [res1, res2] = await Promise.all([
+        fetch("https://bgmibackendzm.onrender.com/tournament", { cache: "no-store" }),
+        fetch("https://bgmibackendzm.onrender.com/passedmatch", { cache: "no-store" })
+      ]);
+
+      const data1 = res1.ok ? await res1.json() : [];
+      const data2 = res2.ok ? await res2.json() : [];
+
+      // Combine and remove duplicates based on tournamentId if necessary
+      setTournaments([...data1, ...data2]);
     } catch (err) {
       console.error("Fetch error:", err);
     } finally {
@@ -45,23 +49,21 @@ export default function Page() {
 
   /* ================= SOCKET.IO LOGIC ================= */
   useEffect(() => {
-    fetchTournaments();
+    fetchAllData();
 
     const onConnect = () => setIsConnected(true);
     const onDisconnect = () => setIsConnected(false);
 
     const handleUpdate = (data) => {
-      console.log("📡 Socket Event:", data?.event);
-      
-      // Matches the logic from your Upcoming Page and Backend
       const relevantEvents = [
         "TOURNAMENT_ADDED", 
         "TOURNAMENT_DETAIL_UPDATED", 
+        "PASSED_MATCH_ADDED", // Added listener for passed matches
         "JOIN_MATCH"
       ];
 
       if (relevantEvents.includes(data?.event)) {
-        fetchTournaments();
+        fetchAllData();
       }
     };
 
@@ -74,27 +76,20 @@ export default function Page() {
       socket.off("disconnect", onDisconnect);
       socket.off("db-update", handleUpdate);
     };
-  }, [fetchTournaments]);
+  }, [fetchAllData]);
 
   return (
     <div className="min-h-screen bg-slate-50 space-y-6 px-4 py-6">
       
-      {/* HEADER WITH SYNC INDICATOR */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-extrabold text-cyan-600 flex items-center gap-2">
-          <Swords className="w-7 h-7" /> Tournaments
+          <Swords className="w-7 h-7" /> Match Center
         </h1>
         <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white border text-[10px] font-bold shadow-sm">
           {isConnected ? (
-            <>
-              <Wifi size={12} className="text-green-500" /> 
-              <span className="text-slate-600">LIVE SYNC</span>
-            </>
+            <><Wifi size={12} className="text-green-500" /> LIVE SYNC</>
           ) : (
-            <>
-              <WifiOff size={12} className="text-red-500" /> 
-              <span className="text-red-500">OFFLINE</span>
-            </>
+            <><WifiOff size={12} className="text-red-500" /> OFFLINE</>
           )}
         </div>
       </div>
@@ -107,24 +102,35 @@ export default function Page() {
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
           {tournaments.map((t, i) => {
             const status = getTournamentStatus(t.startdate, t.enddate);
+            
+            // DYNAMIC ROUTING LOGIC
+            // If status is passed, go to /passed, otherwise go to /detail
+            const detailLink = status === "passed" 
+                ? `/passed/${t.tournamentId}` 
+                : `/detail/${t.tournamentId}`;
+
             return (
               <div 
                 key={t.tournamentId || i} 
-                className="group bg-white border rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-cyan-400 transition-all duration-300"
+                className={`group bg-white border rounded-2xl p-6 shadow-sm transition-all duration-300 ${
+                    status === 'passed' ? 'opacity-80 grayscale-[0.3]' : 'hover:border-cyan-400 hover:shadow-md'
+                }`}
               >
-                <h2 className="text-xl font-bold mb-4 uppercase text-slate-800 group-hover:text-cyan-600 transition-colors">
-                  {t.name || "Tournament"}
+                <h2 className="text-xl font-bold mb-4 uppercase text-slate-800 group-hover:text-cyan-600">
+                  {t.name || t.matchName || "Tournament"}
                 </h2>
                 
                 <div className="text-sm text-slate-600 space-y-2">
                   <div className="flex items-center gap-2">
                     <CalendarDays size={14} className="text-slate-400" /> 
-                    {t.startdate} – {t.enddate}
+                    {t.startdate || "N/A"} {t.enddate ? `– ${t.enddate}` : ""}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Users size={14} className="text-slate-400" /> 
-                    Slots: <span className="font-semibold text-slate-700">{t.slots || "Unlimited"}</span>
-                  </div>
+                  {t.slots && (
+                    <div className="flex items-center gap-2">
+                        <Users size={14} className="text-slate-400" /> 
+                        Slots: <span className="font-semibold text-slate-700">{t.slots}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-6 flex items-center justify-between">
@@ -140,28 +146,24 @@ export default function Page() {
                       </span>
                     )}
                     {status === "passed" && (
-                      <span className="bg-slate-200 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">
-                        ⚫ PASSED
+                      <span className="bg-slate-200 text-slate-600 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                        <History size={12}/> FINISHED
                       </span>
                     )}
                   </div>
                   
                   <Link 
-                      href={`/detail/${t.tournamentId}`}
-                    className="text-cyan-600 text-sm font-bold hover:text-cyan-700 hover:underline flex items-center gap-1"
+                    href={detailLink}
+                    className={`text-sm font-bold flex items-center gap-1 ${
+                        status === 'passed' ? 'text-slate-500 hover:text-slate-700' : 'text-cyan-600 hover:text-cyan-700'
+                    }`}
                   >
-                    View Details →
+                    {status === "passed" ? "View Results →" : "Join Tournament →"}
                   </Link>
                 </div>
               </div>
             );
           })}
-        </div>
-      )}
-
-      {tournaments.length === 0 && !loading && (
-        <div className="text-center py-20 bg-white rounded-2xl border border-dashed">
-          <p className="text-slate-400">No tournaments found.</p>
         </div>
       )}
     </div>
