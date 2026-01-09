@@ -130,7 +130,7 @@ export default function Page() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Users size={14} />
+                   <History size={12}/> 
                     Time: {t.time}
                   </div>
                 </div>
