@@ -126,12 +126,12 @@ export default function Page() {
                 <div className="text-sm text-slate-600 space-y-2">
                   <div className="flex gap-2">
                     <CalendarDays size={14} />
-                    {t.startdate} – {t.enddate}
+                    {t.startdate}
                   </div>
 
                   <div className="flex gap-2">
                     <Users size={14} />
-                    Slots: {t.slots || "Limited"}
+                    Time: {t.time}
                   </div>
                 </div>
 
