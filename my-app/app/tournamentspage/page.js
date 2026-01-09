@@ -158,7 +158,7 @@ export default function Page() {
                         status === 'passed' ? 'text-slate-500 hover:text-slate-700' : 'text-cyan-600 hover:text-cyan-700'
                     }`}
                   >
-                    {status === "passed" ? "View Results →" : "Join Tournament →"}
+                    {status === "passed" ? "View Results →" : "View →"}
                   </Link>
                 </div>
               </div>
